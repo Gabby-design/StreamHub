@@ -1,69 +1,141 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import React, { useState, useEffect } from 'react';
+import { useApp } from '@/context/AppContext';
+import { CategoryPills } from '@/components/feed/CategoryPills';
+import { VideoGrid } from '@/components/feed/VideoGrid';
+import { Video } from '@/types';
+import { Sparkles, Loader2 } from 'lucide-react';
+
+export default function HomePage() {
+  const { videos, selectedCategory, searchQuery, addDiscoveredVideos } = useApp();
+  const [onlineVideos, setOnlineVideos] = useState<Video[]>([]);
+  const [isSearchingOnline, setIsSearchingOnline] = useState(false);
+
+  // Dynamic online catalog search across anime, movies, and cartoons
+  useEffect(() => {
+    let isCancelled = false;
+
+    const fetchLiveCatalog = async () => {
+      const isAnimeFilter =
+        selectedCategory === 'Anime' ||
+        selectedCategory === 'English Dub' ||
+        selectedCategory === 'English Sub';
+
+      const isMovieFilter = selectedCategory === 'Movies';
+      const isCartoonFilter = selectedCategory === 'Cartoons' || selectedCategory === 'Animation';
+      const hasSearch = Boolean(searchQuery.trim());
+
+      if (!isAnimeFilter && !isMovieFilter && !isCartoonFilter && !hasSearch) {
+        setOnlineVideos([]);
+        return;
+      }
+
+      setIsSearchingOnline(true);
+      try {
+        const fetched: Video[] = [];
+
+        if (hasSearch) {
+          // Query both movie and anime APIs in parallel
+          const [movieRes, animeRes] = await Promise.all([
+            fetch(`/api/movies?q=${encodeURIComponent(searchQuery.trim())}`)
+              .then((r) => r.json())
+              .catch(() => null),
+            fetch(`/api/anime?q=${encodeURIComponent(searchQuery.trim())}`)
+              .then((r) => r.json())
+              .catch(() => null),
+          ]);
+          if (movieRes?.videos) fetched.push(...movieRes.videos);
+          if (animeRes?.videos) fetched.push(...animeRes.videos);
+        } else if (isAnimeFilter) {
+          const res = await fetch(`/api/anime?limit=20`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.videos) fetched.push(...data.videos);
+          }
+        } else if (isMovieFilter) {
+          const res = await fetch(`/api/movies?category=Movies`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.videos) fetched.push(...data.videos);
+          }
+        } else if (isCartoonFilter) {
+          const res = await fetch(`/api/movies?category=Cartoons`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.videos) fetched.push(...data.videos);
+          }
+        }
+
+        if (!isCancelled && fetched.length > 0) {
+          setOnlineVideos(fetched);
+          addDiscoveredVideos(fetched);
+        }
+      } catch {
+        // Fallback to local catalog
+      } finally {
+        if (!isCancelled) setIsSearchingOnline(false);
+      }
+    };
+
+    const timer = setTimeout(fetchLiveCatalog, 300);
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [selectedCategory, searchQuery, addDiscoveredVideos]);
+
+  // Combine local videos with live online videos without duplicates
+  const allVideos = React.useMemo(() => {
+    const existingIds = new Set(videos.map((v) => v.id));
+    const uniqueOnline = onlineVideos.filter((v) => !existingIds.has(v.id));
+    return [...videos, ...uniqueOnline];
+  }, [videos, onlineVideos]);
+
+  // Filter videos based on category and search query
+  const filteredVideos = allVideos.filter((video) => {
+    const matchesCategory =
+      selectedCategory === 'All' ||
+      video.category.toLowerCase() === selectedCategory.toLowerCase() ||
+      video.tags.some((t) => t.toLowerCase() === selectedCategory.toLowerCase()) ||
+      (selectedCategory === 'Animation' && video.category === 'Cartoons') ||
+      (selectedCategory === 'Cartoons' && video.mediaType === 'cartoon');
+
+    const matchesSearch =
+      !searchQuery.trim() ||
+      video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      video.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      video.channel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      video.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesCategory && matchesSearch;
+  });
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
+      {/* Category Filter Pills */}
+      <CategoryPills />
+
+      {/* Main Video Feed */}
+      <div className="p-4 lg:p-6 flex-1">
+        {isSearchingOnline && (
+          <div className="flex items-center gap-2 mb-4 text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20 w-fit animate-pulse">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <span>Scanning live global catalog (Movies, Cartoons & Anime)...</span>
+          </div>
+        )}
+
+        <VideoGrid
+          videos={filteredVideos}
+          title={
+            searchQuery
+              ? `Search Results for "${searchQuery}"`
+              : selectedCategory !== 'All'
+              ? `${selectedCategory} Streams`
+              : undefined
+          }
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
