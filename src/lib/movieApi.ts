@@ -402,6 +402,8 @@ export const CURATED_MOVIES: Video[] = [
     dislikes: 6400,
     category: 'Cartoons',
     mediaType: 'cartoon',
+    numberOfSeasons: 2,
+    numberOfEpisodes: 18,
     tags: ['Cartoons', 'Animation', 'Action', 'Fantasy', 'Gaming', 'Netflix'],
     isHls: false,
     rating: '9.0',
@@ -694,14 +696,16 @@ export const CURATED_MOVIES: Video[] = [
 // ============================================================================
 export function formatTmdbItem(item: any): Video {
   const isTv = item.media_type === 'tv' || Boolean(item.first_air_date && !item.release_date);
-  const isCartoon = isTv || (Array.isArray(item.genre_ids) && item.genre_ids.includes(16));
+  const isCartoon =
+    (Array.isArray(item.genre_ids) && item.genre_ids.includes(16)) ||
+    (Array.isArray(item.genres) && item.genres.some((g: any) => g.id === 16 || g.name === 'Animation'));
   const title = item.title || item.name || 'Untitled';
   const tmdbId = item.id;
   const imdbId = item.imdb_id;
   const releaseDate = item.release_date || item.first_air_date || '';
   const year = releaseDate.slice(0, 4) || 'Recent';
   const category = isCartoon ? 'Cartoons' : 'Movies';
-  const mediaType = isCartoon ? 'cartoon' : 'movie';
+  const mediaType = isCartoon ? 'cartoon' : (isTv ? 'series' : 'movie');
   const rating = item.vote_average ? Number(item.vote_average).toFixed(1) : '8.0';
   const streams = buildStreamServers(tmdbId, isTv, imdbId, title);
 
@@ -901,8 +905,8 @@ export async function fetch1TubeDetails(tmdbId: string | number, type: 'movie' |
     }
     const formatted = formatTmdbItem(item);
 
-    // If TV show / cartoon series, automatically fetch season 1 episodes
-    if (formatted.mediaType === 'cartoon' || item.number_of_seasons || type === 'tv') {
+    // If TV show series, automatically fetch season 1 episodes
+    if ((type === 'tv' || item.number_of_seasons || formatted.id.startsWith('tv-')) && cleanId) {
       const episodes = await fetch1TubeSeasonEpisodes(cleanId, 1);
       if (episodes.length > 0) {
         formatted.episodes = episodes;

@@ -31,22 +31,34 @@ export default function WatchPage() {
   const loggedHistoryRef = useRef<string | null>(null);
 
   const isTvShow = Boolean(
-    video && (
-      video.numberOfSeasons ||
-      video.episodes?.length ||
-      video.mediaType === 'cartoon' ||
-      video.mediaType === 'anime' ||
-      video.category === 'Anime' ||
-      video.id.startsWith('tv-') ||
-      video.id.startsWith('anime-')
-    )
+    video &&
+      // A movie is never a TV show unless explicitly defined with seasons/episodes
+      !(
+        video.id.startsWith('movie-') &&
+        !video.numberOfSeasons &&
+        !video.numberOfEpisodes &&
+        !video.episodes?.length
+      ) &&
+      video.mediaType !== 'movie' &&
+      (
+        (video.numberOfSeasons && video.numberOfSeasons > 0) ||
+        (video.numberOfEpisodes && video.numberOfEpisodes > 0) ||
+        (video.episodes && video.episodes.length > 0) ||
+        video.mediaType === 'series' ||
+        video.id.startsWith('tv-') ||
+        (video.id.startsWith('anime-') && !video.id.includes('movie'))
+      )
   );
 
   // Sync initial episodes from video object
   useEffect(() => {
+    if (!isTvShow) {
+      setSeasonEpisodes([]);
+      return;
+    }
     if (video?.episodes && video.episodes.length > 0) {
       setSeasonEpisodes(video.episodes);
-    } else if (video && (video.numberOfEpisodes || isTvShow)) {
+    } else if (video && (video.numberOfEpisodes || video.numberOfSeasons)) {
       const epCount = video.numberOfEpisodes || 24;
       const count = Math.min(epCount, 100);
       setSeasonEpisodes(
@@ -60,12 +72,14 @@ export default function WatchPage() {
           runtime: 24,
         }))
       );
+    } else {
+      setSeasonEpisodes([]);
     }
   }, [video?.episodes, video, isTvShow]);
 
   // Fetch episodes on season switch
   useEffect(() => {
-    if (!video || !video.numberOfSeasons) return;
+    if (!isTvShow || !video || !video.numberOfSeasons) return;
     if (selectedSeason === 1 && video.episodes && video.episodes.length > 0) {
       setSeasonEpisodes(video.episodes);
       return;
@@ -239,7 +253,10 @@ export default function WatchPage() {
         activeEpisode
       );
     }
-    return video.streamServers;
+    return (
+      video.streamServers ||
+      buildStreamServers(video.tmdbId || video.id, false, video.imdbId, video.title)
+    );
   }, [isTvShow, video, selectedSeason, activeEpisode]);
 
   const currentVideoUrl = currentStreamServers?.[0]?.url || video?.videoUrl || '';

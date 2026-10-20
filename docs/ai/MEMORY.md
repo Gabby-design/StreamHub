@@ -34,7 +34,7 @@
 
 ## Gotchas
 
-<!-- Specific: "X silently fails when Y". -->
+- VidLink Pro `/tv/` endpoint returns HTTP 500 when provided movie TMDB IDs. Media with `movie-` IDs or `mediaType === 'movie'` must never evaluate `isTvShow = true` on watch page. Animated movies (`category: 'Cartoons'`) must retain movie classification unless explicit season counts exist.
 
 ## Deferred Work
 
