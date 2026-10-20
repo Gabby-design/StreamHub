@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Video } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { CheckCircle } from 'lucide-react';
+import { formatDuration } from '@/lib/utils';
 
 interface UpNextSidebarProps {
   currentVideoId: string;
@@ -59,7 +60,7 @@ export const UpNextSidebar: React.FC<UpNextSidebarProps> = ({ currentVideoId }) 
                 className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
               />
               <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 py-0.2 text-[10px] font-semibold text-white">
-                {video.duration}
+                {formatDuration(video.duration, video.durationSec)}
               </span>
               <span className="absolute top-1 right-1 rounded bg-indigo-600/90 border border-white/20 px-1 py-0.2 text-[9px] font-bold text-white shadow-sm">
                 {video.resolution || (video.mediaType === 'movie' || video.category === 'Movies' ? '1080p' : '720p')}

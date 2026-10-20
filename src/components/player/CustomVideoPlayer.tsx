@@ -815,16 +815,55 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
             suppressHydrationWarning={true}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             referrerPolicy="no-referrer"
+            sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"
             allowFullScreen
             className="h-full w-full border-0"
           />
-          {onToggleTheater && (
+          {/* Ad-Shield & Theater Overlay Controls */}
+          <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
+            <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/75 border border-emerald-500/40 text-[10px] font-bold text-emerald-400 backdrop-blur-md shadow-lg">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Ad-Shield Active</span>
+            </div>
+            {onToggleTheater && (
+              <button
+                onClick={onToggleTheater}
+                className="rounded-xl bg-black/60 hover:bg-black/90 p-2 text-white/80 hover:text-white transition backdrop-blur-sm border border-white/10"
+                title="Toggle Theater Mode"
+              >
+                <Tv className={`h-4 w-4 ${isTheater ? 'text-indigo-400' : ''}`} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile Ad-Shield Status & Mirror Switcher */}
+        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-[#11131a] border border-white/10 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span className="font-semibold text-emerald-400 text-xs">
+              Ad-Shield Active
+            </span>
+            <span className="text-slate-500">•</span>
+            <span className="text-slate-400 text-[11px]">
+              Popups and third-party site redirects are blocked.
+            </span>
+          </div>
+          {streamServers && streamServers.length > 1 && (
             <button
-              onClick={onToggleTheater}
-              className="absolute top-3 right-3 rounded-xl bg-black/60 hover:bg-black/90 p-2 text-white/80 hover:text-white transition z-20 backdrop-blur-sm border border-white/10"
-              title="Toggle Theater Mode"
+              onClick={() => {
+                const srvs = streamServers.filter((s) => !s.name.toLowerCase().includes('trailer'));
+                const currentIdx = srvs.findIndex((s) => s.url === activeSrc);
+                const nextSrv = srvs[(currentIdx + 1) % srvs.length];
+                if (nextSrv) setActiveSrc(nextSrv.url);
+              }}
+              className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 font-semibold text-[11px] border border-indigo-500/30 transition flex items-center gap-1.5"
             >
-              <Tv className={`h-4 w-4 ${isTheater ? 'text-indigo-400' : ''}`} />
+              <Server className="h-3 w-3" />
+              <span>Next Mirror Server</span>
             </button>
           )}
         </div>

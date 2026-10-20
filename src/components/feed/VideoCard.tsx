@@ -12,6 +12,7 @@ import {
   Share2,
   Check,
 } from 'lucide-react';
+import { formatDuration } from '@/lib/utils';
 
 interface VideoCardProps {
   video: Video;
@@ -99,7 +100,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
 
         {/* Duration badge */}
         <div className="absolute bottom-2 right-2 rounded-md bg-black/85 px-1.5 py-0.5 text-[11px] font-semibold text-white tracking-wider backdrop-blur-sm">
-          {video.duration}
+          {formatDuration(video.duration, video.durationSec)}
         </div>
 
         {/* Resolution badge (1080p / 720p / 4K) */}

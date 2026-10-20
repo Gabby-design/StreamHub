@@ -15,6 +15,7 @@ import {
   X,
   Copy,
 } from 'lucide-react';
+import { formatDuration, formatDurationText } from '@/lib/utils';
 
 interface VideoMetaProps {
   video: Video;
@@ -91,8 +92,10 @@ export const VideoMeta: React.FC<VideoMetaProps> = ({ video }) => {
         </div>
 
         {video.duration && (
-          <div className="flex items-center gap-1 rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-xs font-semibold text-slate-300">
-            <span>{video.duration}</span>
+          <div className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-xs font-semibold text-slate-300">
+            <span className="font-mono text-indigo-300 font-bold">{formatDuration(video.duration, video.durationSec)}</span>
+            <span className="text-slate-500">•</span>
+            <span>{formatDurationText(video.duration, video.durationSec)}</span>
           </div>
         )}
 
