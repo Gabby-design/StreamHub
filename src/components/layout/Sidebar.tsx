@@ -26,7 +26,13 @@ import {
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
-  const { sidebarOpen, setSidebarOpen, subscribedChannelIds } = useApp();
+  const {
+    sidebarOpen,
+    setSidebarOpen,
+    subscribedChannelIds,
+    setSearchQuery,
+    setSelectedCategory,
+  } = useApp();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -68,6 +74,13 @@ export const Sidebar: React.FC = () => {
               href={item.href}
               onClick={() => {
                 if (isDrawer) setSidebarOpen(false);
+                if (item.href === '/') {
+                  setSearchQuery('');
+                  setSelectedCategory('All');
+                  if (typeof window !== 'undefined') {
+                    window.history.pushState(null, '', '/');
+                  }
+                }
               }}
               className={`flex items-center gap-4 rounded-xl px-3 py-2.5 text-sm font-medium transition duration-150 ${
                 isActive

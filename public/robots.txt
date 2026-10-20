@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+Sitemap: https://streamhub-three-orpin.vercel.app/sitemap.xml

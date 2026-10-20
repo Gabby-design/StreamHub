@@ -15,10 +15,16 @@ function HomeContent() {
   const [onlineVideos, setOnlineVideos] = useState<Video[]>([]);
   const [isSearchingOnline, setIsSearchingOnline] = useState(false);
 
-  // Sync URL search param into AppContext if present
+  // Sync URL search param into AppContext if present; reset if absent on root /
   useEffect(() => {
-    if (urlSearch && urlSearch !== searchQuery) {
-      setSearchQuery(urlSearch);
+    if (urlSearch) {
+      if (urlSearch !== searchQuery) {
+        setSearchQuery(urlSearch);
+      }
+    } else if (searchQuery) {
+      // User navigated directly to / (e.g. clicked logo or home)
+      setSearchQuery('');
+      setOnlineVideos([]);
     }
   }, [urlSearch, searchQuery, setSearchQuery]);
 

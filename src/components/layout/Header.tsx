@@ -29,9 +29,24 @@ export const Header: React.FC = () => {
     toggleSidebar,
     searchQuery,
     setSearchQuery,
+    setSelectedCategory,
     videos,
     addDiscoveredVideos,
   } = useApp();
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setInputVal('');
+    setSearchQuery('');
+    setSelectedCategory('All');
+    setShowSuggestions(false);
+    setShowMobileSearch(false);
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', '/');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    router.push('/');
+  };
 
   const [inputVal, setInputVal] = useState(searchQuery);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -173,7 +188,12 @@ export const Header: React.FC = () => {
             <Menu className="h-5 w-5" />
           </button>
 
-          <Link href="/" className="flex items-center gap-2.5 group">
+          <Link
+            href="/"
+            onClick={handleLogoClick}
+            className="flex items-center gap-2.5 group cursor-pointer"
+            title="StreamHub Home"
+          >
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-pink-500 shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-200">
               <PlaySquare className="h-5 w-5 text-white" />
             </div>
