@@ -11,9 +11,7 @@
 
 - Typing into search input must only mutate local `inputVal`; global `searchQuery` is only dispatched on explicit Enter / submit / suggestion selection.
 - All devices initialize with `user = null` displaying a dedicated "Sign In" button instead of any mock profile picture.
-- Viewport explicitly exports `device-width` and `initialScale: 1` with strict horizontal overflow constraints.
-- Streaming embed iframes omit `sandbox` and use `referrerPolicy="strict-origin-when-cross-origin"` so external streaming hosts do not reject playback with sandbox errors.
-- Movie stream server 1 defaults to VidLink Pro (with AutoEmbed, VidSrc CC v2, Embed.su mirrors) offering native +10s forward/-10s rewind seeking and minimal ad redirects.
+- Streaming embed iframes enforce `sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"` with `referrerPolicy="no-referrer"`, first-click absorbing overlay, beforeunload guards, and CSP frame-src domain restrictions. Users have immediate "Switch Server" failover and sandbox bypass toggle if a host requires it.
 
 ## Architecture
 

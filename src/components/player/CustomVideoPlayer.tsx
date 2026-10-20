@@ -98,6 +98,14 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     setActiveSrc(getInitialSrc());
   }, [getInitialSrc]);
 
+  // Shield state: Absorbs first ad-trigger click & enforces sandbox protection
+  const [absorbClick, setAbsorbClick] = useState(true);
+  const [isSandboxed, setIsSandboxed] = useState(true);
+
+  useEffect(() => {
+    setAbsorbClick(true);
+  }, [activeSrc]);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
@@ -809,15 +817,29 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
             isTheater ? 'aspect-[21/9] max-h-[80vh]' : 'aspect-video rounded-2xl'
           } shadow-2xl border border-white/5`}
         >
-          <iframe
-            src={cleanEmbedUrl}
-            title={title || 'Video Player'}
-            suppressHydrationWarning={true}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
-            className="h-full w-full border-0"
-          />
+          <div className="relative w-full h-full">
+            <iframe
+              src={cleanEmbedUrl}
+              title={title || 'Video Player'}
+              suppressHydrationWarning={true}
+              sandbox={isSandboxed ? 'allow-scripts allow-same-origin allow-forms allow-presentation' : undefined}
+              allow="autoplay; fullscreen; picture-in-picture"
+              referrerPolicy="no-referrer"
+              allowFullScreen
+              className="h-full w-full border-0"
+            />
+            {absorbClick && (
+              <div
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setAbsorbClick(false);
+                }}
+                className="absolute inset-0 z-10 cursor-pointer bg-transparent"
+                title="Click to interact with video player"
+              />
+            )}
+          </div>
           {/* Cinema Stream & Theater Overlay Controls */}
           <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
             <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/75 border border-indigo-500/40 text-[10px] font-bold text-indigo-400 backdrop-blur-md shadow-lg">
@@ -836,7 +858,7 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
           </div>
         </div>
 
-        {/* Mobile Stream Status & Mirror Switcher */}
+        {/* Stream Status & Mirror Switcher */}
         <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-[#11131a] border border-white/10 text-xs">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
@@ -844,27 +866,39 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
             <span className="font-semibold text-emerald-400 text-xs">
-              Cinema Stream Active
+              Cinema Stream Shield Active
             </span>
             <span className="text-slate-500">•</span>
             <span className="text-slate-400 text-[11px]">
-              Full HD 1080p stream connected without sandbox restrictions.
+              {isSandboxed ? 'Sandbox popups & ad redirects blocked' : 'Unrestricted playback mode'}
             </span>
           </div>
-          {streamServers && streamServers.length > 1 && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => {
-                const srvs = streamServers.filter((s) => !s.name.toLowerCase().includes('trailer'));
-                const currentIdx = srvs.findIndex((s) => s.url === activeSrc);
-                const nextSrv = srvs[(currentIdx + 1) % srvs.length];
-                if (nextSrv) setActiveSrc(nextSrv.url);
-              }}
-              className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 font-semibold text-[11px] border border-indigo-500/30 transition flex items-center gap-1.5"
+              onClick={() => setIsSandboxed(!isSandboxed)}
+              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] font-medium transition"
+              title="Toggle if an embed provider displays a sandbox warning"
             >
-              <Server className="h-3 w-3" />
-              <span>Next Mirror Server</span>
+              {isSandboxed ? 'Bypass Sandbox' : 'Enable Sandbox'}
             </button>
-          )}
+            {streamServers && streamServers.length > 1 && (
+              <button
+                onClick={() => {
+                  const srvs = streamServers.filter((s) => !s.name.toLowerCase().includes('trailer'));
+                  const currentIdx = srvs.findIndex((s) => s.url === activeSrc);
+                  const nextSrv = srvs[(currentIdx + 1) % srvs.length];
+                  if (nextSrv) {
+                    setActiveSrc(nextSrv.url);
+                    setAbsorbClick(true);
+                  }
+                }}
+                className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 font-semibold text-[11px] border border-indigo-500/30 transition flex items-center gap-1.5"
+              >
+                <Server className="h-3 w-3" />
+                <span>Switch Server</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {youtubeId && isCurrentTrailer ? (

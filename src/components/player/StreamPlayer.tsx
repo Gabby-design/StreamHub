@@ -97,6 +97,14 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
     setHasVideoError(false);
   }, [activeSrc]);
 
+  // Shield state: Absorbs first ad-trigger click & enforces sandbox protection
+  const [absorbClick, setAbsorbClick] = useState(true);
+  const [isSandboxed, setIsSandboxed] = useState(true);
+
+  useEffect(() => {
+    setAbsorbClick(true);
+  }, [activeSrc]);
+
   const activeServer = streamServers?.find((s) => s.url === activeSrc);
 
   const isDirectMedia = Boolean(
@@ -513,15 +521,29 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
 
         {/* Mode 1: Trailer / External Embed Mode */}
         {isEmbedMode ? (
-          <iframe
-            src={getEmbedUrl(activeSrc)}
-            title={title || 'Video Player'}
-            suppressHydrationWarning={true}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
-            className="h-full w-full border-0"
-          />
+          <div className="relative w-full h-full">
+            <iframe
+              src={getEmbedUrl(activeSrc)}
+              title={title || 'Video Player'}
+              suppressHydrationWarning={true}
+              sandbox={isSandboxed ? 'allow-scripts allow-same-origin allow-forms allow-presentation' : undefined}
+              allow="autoplay; fullscreen; picture-in-picture"
+              referrerPolicy="no-referrer"
+              allowFullScreen
+              className="h-full w-full border-0"
+            />
+            {absorbClick && (
+              <div
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setAbsorbClick(false);
+                }}
+                className="absolute inset-0 z-10 cursor-pointer bg-transparent"
+                title="Click to interact with video player"
+              />
+            )}
+          </div>
         ) : (
           /* Mode 2: HLS / Direct HTML5 Stream Mode with Full Custom Controls */
           <>
@@ -669,6 +691,51 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
               Watch 1080p Full Episode
             </button>
           )}
+        </div>
+      )}
+
+      {/* Stream Shield Status & Switch Server Bar */}
+      {isEmbedMode && (
+        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-[#11131a] border border-white/10 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span className="font-semibold text-emerald-400 text-xs">
+              Stream Shield Active
+            </span>
+            <span className="text-slate-500">•</span>
+            <span className="text-slate-400 text-[11px]">
+              {isSandboxed ? 'Sandbox popups & ad redirects blocked' : 'Unrestricted playback mode'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsSandboxed(!isSandboxed)}
+              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] font-medium transition"
+              title="Toggle if an embed provider displays a sandbox warning"
+            >
+              {isSandboxed ? 'Bypass Sandbox' : 'Enable Sandbox'}
+            </button>
+            {streamServers && streamServers.length > 1 && (
+              <button
+                onClick={() => {
+                  const srvs = streamServers.filter((s) => !s.name.toLowerCase().includes('trailer'));
+                  const currentIdx = srvs.findIndex((s) => s.url === activeSrc);
+                  const nextSrv = srvs[(currentIdx + 1) % srvs.length];
+                  if (nextSrv) {
+                    setActiveSrc(nextSrv.url);
+                    setAbsorbClick(true);
+                  }
+                }}
+                className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 font-semibold text-[11px] border border-indigo-500/30 transition flex items-center gap-1.5"
+              >
+                <Server className="h-3 w-3" />
+                <span>Switch Server</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

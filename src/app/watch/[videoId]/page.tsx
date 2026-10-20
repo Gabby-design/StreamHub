@@ -230,6 +230,20 @@ export default function WatchPage() {
     }
   }, [video?.id, addToHistory]);
 
+  // Window beforeunload guard against third-party ad script navigations
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
   const handleVideoEnded = React.useCallback(() => {
     if (autoplay) {
       const currentIndex = videos.findIndex((v) => v.id === videoId);
