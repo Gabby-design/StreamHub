@@ -123,7 +123,7 @@ export function buildStreamServers(
 
   const servers: Array<{ name: string; url: string; isEmbed: boolean; quality: string }> = [];
 
-  // Server 1: AutoEmbed (Universal streaming catalog - instant 1080p playback)
+  // Server 1: AutoEmbed (Universal streaming catalog - instant 1080p playback, sandbox-friendly)
   if (numericId) {
     servers.push({
       name: 'Server 1 (1080p AutoEmbed)',
@@ -135,19 +135,7 @@ export function buildStreamServers(
     });
   }
 
-  // Server 2: VidLink Pro (Fast 1080p mirror with seek controls)
-  if (numericId) {
-    servers.push({
-      name: `Server ${servers.length + 1} (1080p VidLink Pro)`,
-      url: isTv
-        ? `https://vidlink.pro/tv/${numericId}/${season}/${episode}?primaryColor=6366f1&title=true&poster=true`
-        : `https://vidlink.pro/movie/${numericId}?primaryColor=6366f1&title=true&poster=true`,
-      isEmbed: true,
-      quality: '1080p',
-    });
-  }
-
-  // Server 3: VidSrc CC v2 (Fast modern CDN)
+  // Server 2: VidSrc CC v2 (Fast modern CDN)
   servers.push({
     name: `Server ${servers.length + 1} (1080p VidSrc CC)`,
     url: isTv
@@ -161,7 +149,7 @@ export function buildStreamServers(
     quality: '1080p',
   });
 
-  // Server 4: Embed.su (Direct streaming engine)
+  // Server 3: Embed.su (Direct streaming engine)
   servers.push({
     name: `Server ${servers.length + 1} (1080p Embed.su)`,
     url: isTv
@@ -171,7 +159,7 @@ export function buildStreamServers(
     quality: '1080p',
   });
 
-  // Server 5: MultiEmbed (Supports both IMDb and TMDB)
+  // Server 4: MultiEmbed (Supports both IMDb and TMDB)
   servers.push({
     name: `Server ${servers.length + 1} (1080p MultiEmbed)`,
     url: isTv
@@ -181,7 +169,7 @@ export function buildStreamServers(
     quality: '1080p',
   });
 
-  // Server 6: VidFast
+  // Server 5: VidFast
   if (numericId) {
     servers.push({
       name: `Server ${servers.length + 1} (1080p VidFast)`,
@@ -192,6 +180,20 @@ export function buildStreamServers(
       quality: '1080p',
     });
   }
+
+  // Server 6: VidLink Pro (Fast 1080p mirror with seek controls)
+  if (numericId) {
+    servers.push({
+      name: `Server ${servers.length + 1} (1080p VidLink Pro)`,
+      url: isTv
+        ? `https://vidlink.pro/tv/${numericId}/${season}/${episode}?primaryColor=6366f1&title=true&poster=true`
+        : `https://vidlink.pro/movie/${numericId}?primaryColor=6366f1&title=true&poster=true`,
+      isEmbed: true,
+      quality: '1080p',
+    });
+  }
+
+
 
   // Server 7: VidSrc ME (Mirror)
   servers.push({
