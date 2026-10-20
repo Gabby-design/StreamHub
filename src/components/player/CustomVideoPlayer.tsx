@@ -19,6 +19,8 @@ import {
   Server,
   AlertCircle,
   Film,
+  FastForward,
+  Rewind,
 } from 'lucide-react';
 
 interface StreamServerOption {
@@ -412,6 +414,140 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     }
   }, []);
 
+  // Mobile & Screen Gestures: Double-tap seek, Hold for 2X Speed, Single tap toggle
+  const [doubleTapFeedback, setDoubleTapFeedback] = useState<{
+    side: 'left' | 'right';
+    count: number;
+  } | null>(null);
+  const [isHoldingFastForward, setIsHoldingFastForward] = useState(false);
+  const lastTapRef = useRef<{ time: number; x: number }>({ time: 0, x: 0 });
+  const singleTapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isHoldingRef = useRef(false);
+  const touchStartPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const doubleTapFeedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startHoldSpeed = useCallback(() => {
+    isHoldingRef.current = true;
+    setIsHoldingFastForward(true);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = 2.0;
+    }
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(40);
+      } catch {
+        // no-op
+      }
+    }
+  }, []);
+
+  const endHoldSpeed = useCallback(() => {
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+    if (isHoldingRef.current) {
+      isHoldingRef.current = false;
+      setIsHoldingFastForward(false);
+      if (videoRef.current) {
+        videoRef.current.playbackRate = playbackSpeed;
+      }
+      return true;
+    }
+    return false;
+  }, [playbackSpeed]);
+
+  const handlePointerStart = useCallback(
+    (clientX: number, clientY: number) => {
+      touchStartPosRef.current = { x: clientX, y: clientY };
+      if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = setTimeout(() => {
+        startHoldSpeed();
+      }, 350);
+    },
+    [startHoldSpeed]
+  );
+
+  const handlePointerMove = useCallback((clientX: number, clientY: number) => {
+    const dx = Math.abs(clientX - touchStartPosRef.current.x);
+    const dy = Math.abs(clientY - touchStartPosRef.current.y);
+    if (dx > 15 || dy > 15) {
+      if (holdTimeoutRef.current) {
+        clearTimeout(holdTimeoutRef.current);
+        holdTimeoutRef.current = null;
+      }
+    }
+  }, []);
+
+  const handlePointerEnd = useCallback(
+    (clientX: number) => {
+      const wasHolding = endHoldSpeed();
+      if (wasHolding) return;
+
+      const now = Date.now();
+      const container = containerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const relX = (clientX - rect.left) / rect.width;
+
+      const timeDiff = now - lastTapRef.current.time;
+      if (timeDiff < 320) {
+        // Double tap
+        if (singleTapTimeoutRef.current) {
+          clearTimeout(singleTapTimeoutRef.current);
+          singleTapTimeoutRef.current = null;
+        }
+
+        if (relX < 0.38) {
+          // Left: rewind 10s
+          seekRelative(-10);
+          if (doubleTapFeedbackTimeoutRef.current) clearTimeout(doubleTapFeedbackTimeoutRef.current);
+          setDoubleTapFeedback((prev) => ({
+            side: 'left',
+            count: prev?.side === 'left' ? prev.count + 10 : 10,
+          }));
+          doubleTapFeedbackTimeoutRef.current = setTimeout(() => {
+            setDoubleTapFeedback(null);
+          }, 750);
+        } else if (relX > 0.62) {
+          // Right: forward 10s
+          seekRelative(10);
+          if (doubleTapFeedbackTimeoutRef.current) clearTimeout(doubleTapFeedbackTimeoutRef.current);
+          setDoubleTapFeedback((prev) => ({
+            side: 'right',
+            count: prev?.side === 'right' ? prev.count + 10 : 10,
+          }));
+          doubleTapFeedbackTimeoutRef.current = setTimeout(() => {
+            setDoubleTapFeedback(null);
+          }, 750);
+        } else {
+          // Middle tap: toggle play/pause
+          togglePlay();
+        }
+
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+          try {
+            navigator.vibrate(30);
+          } catch {
+            // no-op
+          }
+        }
+
+        lastTapRef.current = { time: 0, x: 0 };
+      } else {
+        // Single tap: toggle controls after 280ms
+        lastTapRef.current = { time: now, x: relX };
+        if (singleTapTimeoutRef.current) clearTimeout(singleTapTimeoutRef.current);
+        singleTapTimeoutRef.current = setTimeout(() => {
+          setShowControls((prev) => !prev);
+        }, 280);
+      }
+    },
+    [endHoldSpeed, seekRelative, togglePlay]
+  );
+
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -678,7 +814,7 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
             title={title || 'Video Player'}
             suppressHydrationWarning={true}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="strict-origin-when-cross-origin"
+            referrerPolicy="no-referrer"
             allowFullScreen
             className="h-full w-full border-0"
           />
@@ -754,18 +890,79 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
       <div
         ref={containerRef}
         onMouseMove={handleMouseMove}
-        onMouseLeave={() => isPlaying && setShowControls(false)}
-        className={`relative w-full overflow-hidden bg-black select-none group ${
+        onMouseLeave={() => {
+          if (isPlaying) setShowControls(false);
+          endHoldSpeed();
+        }}
+        onTouchStart={(e) => {
+          if (e.touches.length > 0) {
+            handlePointerStart(e.touches[0].clientX, e.touches[0].clientY);
+          }
+        }}
+        onTouchMove={(e) => {
+          if (e.touches.length > 0) {
+            handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+          }
+        }}
+        onTouchEnd={(e) => {
+          if (e.changedTouches.length > 0) {
+            handlePointerEnd(e.changedTouches[0].clientX);
+          }
+        }}
+        onMouseDown={(e) => {
+          if (e.button === 0) {
+            handlePointerStart(e.clientX, e.clientY);
+          }
+        }}
+        onMouseUp={(e) => {
+          if (e.button === 0) {
+            handlePointerEnd(e.clientX);
+          }
+        }}
+        className={`relative w-full overflow-hidden bg-black select-none group touch-none ${
           isTheater ? 'aspect-[21/9] max-h-[80vh]' : 'aspect-video rounded-2xl'
         } shadow-2xl border border-white/5`}
       >
       <video
         ref={videoRef}
         poster={poster}
-        onClick={togglePlay}
         playsInline
         className="h-full w-full object-contain cursor-pointer"
       />
+
+      {/* 2X Speed YouTube-style Hold Indicator */}
+      {isHoldingFastForward && (
+        <div className="absolute top-5 inset-x-0 flex items-center justify-center pointer-events-none z-40 animate-in fade-in zoom-in-90 duration-150">
+          <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/85 border border-white/20 backdrop-blur-md shadow-2xl text-white text-xs font-bold tracking-wider uppercase">
+            <span>2X Speed</span>
+            <FastForward className="h-4 w-4 text-indigo-400 fill-indigo-400 animate-pulse" />
+          </div>
+        </div>
+      )}
+
+      {/* Double Tap Left Ripple (-10s / Rewind) */}
+      {doubleTapFeedback?.side === 'left' && (
+        <div className="absolute inset-y-0 left-0 w-2/5 flex items-center justify-center pointer-events-none z-30 overflow-hidden">
+          <div className="flex flex-col items-center justify-center w-36 h-36 rounded-full bg-white/15 backdrop-blur-xs border border-white/20 shadow-2xl text-white animate-in zoom-in-75 fade-in duration-150">
+            <RotateCcw className="h-8 w-8 text-white -rotate-12 transition-transform" />
+            <span className="text-white text-xs font-black mt-1 tracking-tight">
+              -{doubleTapFeedback.count} seconds
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Double Tap Right Ripple (+10s / Forward) */}
+      {doubleTapFeedback?.side === 'right' && (
+        <div className="absolute inset-y-0 right-0 w-2/5 flex items-center justify-center pointer-events-none z-30 overflow-hidden">
+          <div className="flex flex-col items-center justify-center w-36 h-36 rounded-full bg-white/15 backdrop-blur-xs border border-white/20 shadow-2xl text-white animate-in zoom-in-75 fade-in duration-150">
+            <RotateCw className="h-8 w-8 text-white rotate-12 transition-transform" />
+            <span className="text-white text-xs font-black mt-1 tracking-tight">
+              +{doubleTapFeedback.count} seconds
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Buffering Spinner */}
       {isLoading && (
@@ -777,7 +974,10 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
       {/* Center Big Play Button Overlay when Paused */}
       {!isPlaying && !isLoading && (
         <button
-          onClick={togglePlay}
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePlay();
+          }}
           className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition group"
           aria-label="Play video"
         >
@@ -789,6 +989,12 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
 
       {/* Controls Overlay */}
       <div
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
         className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-4 transition-opacity duration-300 ${
           showControls || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}

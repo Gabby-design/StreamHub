@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Comment } from '@/types';
 import { useApp } from '@/context/AppContext';
 import {
@@ -19,10 +19,15 @@ interface CommentsSectionProps {
 
 export const CommentsSection: React.FC<CommentsSectionProps> = ({ videoId }) => {
   const { user, commentsMap, addComment, voteComment, openAuthModal } = useApp();
+  const [mounted, setMounted] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [replyTextMap, setReplyTextMap] = useState<Record<string, string>>({});
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'top' | 'newest'>('top');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const comments: Comment[] = commentsMap[videoId] || [];
 
@@ -70,7 +75,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ videoId }) => 
 
       {/* Add Comment Input Form */}
       <form onSubmit={handleAddComment} className="flex items-start gap-3 mb-8">
-        {user ? (
+        {mounted && user ? (
           <img
             src={user.avatarUrl}
             alt={user.name}

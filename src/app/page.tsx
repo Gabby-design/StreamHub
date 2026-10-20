@@ -15,18 +15,24 @@ function HomeContent() {
   const [onlineVideos, setOnlineVideos] = useState<Video[]>([]);
   const [isSearchingOnline, setIsSearchingOnline] = useState(false);
 
-  // Sync URL search param into AppContext if present; reset if absent on root /
+  // Clean home screen on manual browser reload; sync urlSearch only on direct external deep links
   useEffect(() => {
-    if (urlSearch) {
-      if (urlSearch !== searchQuery) {
+    if (typeof window !== 'undefined') {
+      const navEntry =
+        window.performance &&
+        window.performance.getEntriesByType &&
+        (window.performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined);
+
+      const isReload = navEntry?.type === 'reload';
+
+      if (isReload) {
+        setSearchQuery('');
+        window.history.replaceState(null, '', '/');
+      } else if (urlSearch) {
         setSearchQuery(urlSearch);
       }
-    } else if (searchQuery) {
-      // User navigated directly to / (e.g. clicked logo or home)
-      setSearchQuery('');
-      setOnlineVideos([]);
     }
-  }, [urlSearch, searchQuery, setSearchQuery]);
+  }, [urlSearch, setSearchQuery]);
 
   // Dynamic online catalog search across anime, movies, and cartoons
   useEffect(() => {
@@ -137,12 +143,12 @@ function HomeContent() {
   });
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
+    <div className="flex flex-col min-h-[calc(100vh-4rem)] w-full max-w-full overflow-x-hidden min-w-0">
       {/* Category Filter Pills */}
       <CategoryPills />
 
       {/* Main Video Feed */}
-      <div className="p-4 lg:p-6 flex-1">
+      <div className="p-3 sm:p-4 lg:p-6 flex-1 w-full max-w-full min-w-0">
         {isSearchingOnline && (
           <div className="flex items-center gap-2 mb-4 text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20 w-fit animate-pulse">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />

@@ -24,11 +24,11 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
     <div className="min-h-screen bg-[#090a0f] text-slate-100 flex flex-col">
       <Header />
       <AuthModal />
-      <div className="flex flex-1 relative">
+      <div className="flex flex-1 relative w-full max-w-full overflow-x-hidden">
         <Sidebar />
 
         <main
-          className={`flex-1 transition-all duration-300 ease-in-out ${
+          className={`flex-1 w-full max-w-full min-w-0 transition-all duration-300 ease-in-out ${
             !isWatchPage ? (sidebarOpen ? 'md:ml-64' : 'md:ml-20') : 'ml-0'
           }`}
         >

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { VideoCard } from '@/components/feed/VideoCard';
 import Link from 'next/link';
@@ -15,6 +15,11 @@ import {
 
 export default function LibraryPage() {
   const { user, watchHistory, videos, likedVideoIds, savedVideoIds } = useApp();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const likedVideos = videos.filter((v) => likedVideoIds.includes(v.id));
   const savedVideos = videos.filter((v) => savedVideoIds.includes(v.id));
@@ -24,7 +29,7 @@ export default function LibraryPage() {
       {/* Profile Header */}
       <div className="rounded-2xl bg-gradient-to-r from-indigo-950/40 via-[#11131a] to-pink-950/20 border border-white/5 p-6 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
         <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-          {user ? (
+          {mounted && user ? (
             <img
               src={user.avatarUrl}
               alt={user.name}
@@ -36,8 +41,8 @@ export default function LibraryPage() {
             </div>
           )}
           <div>
-            <h1 className="text-xl font-bold text-white">{user?.name || 'Guest Creator'}</h1>
-            <p className="text-xs text-slate-400 font-mono">{user?.handle || '@guest'}</p>
+            <h1 className="text-xl font-bold text-white">{mounted && user ? user.name : 'Guest Creator'}</h1>
+            <p className="text-xs text-slate-400 font-mono">{mounted && user ? user.handle : '@guest'}</p>
             <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
               <span>{watchHistory.length} History</span>
               <span>•</span>

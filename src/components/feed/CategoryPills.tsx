@@ -18,7 +18,7 @@ export const CategoryPills: React.FC = () => {
 
   return (
     <div
-      className="relative sticky top-16 z-20 flex items-center bg-[#090a0f]/95 backdrop-blur-md py-3 px-4 lg:px-6 border-b border-white/5"
+      className="relative sticky top-16 z-20 flex items-center bg-[#090a0f]/95 backdrop-blur-md py-2.5 sm:py-3 px-2.5 sm:px-4 lg:px-6 border-b border-white/5 w-full max-w-full overflow-hidden"
       suppressHydrationWarning
     >
       <button
@@ -31,7 +31,7 @@ export const CategoryPills: React.FC = () => {
 
       <div
         ref={scrollContainerRef}
-        className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth"
+        className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth flex-1 min-w-0 touch-pan-x overscroll-x-contain"
         suppressHydrationWarning
       >
         {MOCK_CATEGORIES.map((category) => {

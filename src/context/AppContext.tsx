@@ -7,41 +7,41 @@ import { CURATED_MOVIES } from '@/lib/movieApi';
 
 interface AppContextType {
   user: UserProfile | null;
-  login: (email: string, name?: string) => void;
+  login: (email: string, name?: string, handle?: string) => void;
   logout: () => void;
   isAuthModalOpen: boolean;
   openAuthModal: () => void;
   closeAuthModal: () => void;
-  
+
   // Videos
   videos: Video[];
   addUploadedVideo: (video: Video) => void;
   addDiscoveredVideos: (newVideos: Video[]) => void;
-  
+
   // History & Library
   watchHistory: Video[];
   addToHistory: (video: Video) => void;
   clearHistory: () => void;
-  
+
   // Liked Videos
   likedVideoIds: string[];
   dislikedVideoIds: string[];
   toggleLike: (videoId: string) => void;
   toggleDislike: (videoId: string) => void;
-  
+
   // Watch Later
   savedVideoIds: string[];
   toggleWatchLater: (videoId: string) => void;
-  
+
   // Subscriptions
   subscribedChannelIds: string[];
   toggleSubscribe: (channelId: string) => void;
-  
+
   // Comments
   commentsMap: Record<string, Comment[]>;
   addComment: (videoId: string, content: string, parentCommentId?: string) => void;
   voteComment: (videoId: string, commentId: string, type: 'like' | 'dislike') => void;
-  
+
   // Playback & Layout
   autoplay: boolean;
   setAutoplay: (val: boolean) => void;
@@ -52,7 +52,7 @@ interface AppContextType {
   setSearchQuery: (q: string) => void;
   selectedCategory: string;
   setSelectedCategory: (cat: string) => void;
-  
+
   // Queue
   queue: Video[];
   addToQueue: (video: Video) => void;
@@ -61,16 +61,17 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const DEFAULT_USER: UserProfile = {
-  id: 'usr_default',
-  name: 'Alex Mercer',
-  email: 'alex.mercer@streamhub.io',
-  avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-  handle: '@alexmercer',
+export const OWNER_USER: UserProfile = {
+  id: 'usr_owner_gabriel',
+  name: 'Gabriel Tolulope',
+  email: 'gabriel@streamhub.io',
+  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+  handle: 'G@bby',
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserProfile | null>(DEFAULT_USER);
+  // Any device starts logged out (null) so a Sign In button is shown
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [videos, setVideos] = useState<Video[]>([...CURATED_MOVIES, ...MOCK_VIDEOS]);
   const [watchHistory, setWatchHistory] = useState<Video[]>([]);
@@ -91,6 +92,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Hydrate local storage on mount
   useEffect(() => {
     try {
+      const storedUser = localStorage.getItem('streamhub_user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+
       const storedHistory = localStorage.getItem('streamhub_history');
       if (storedHistory) setWatchHistory(JSON.parse(storedHistory));
 
@@ -122,20 +128,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  const login = useCallback((email: string, name = 'User') => {
+  const login = useCallback((email: string, name = 'User', handle?: string) => {
+    const isOwner =
+      email.toLowerCase().includes('gabriel') ||
+      name.toLowerCase().includes('gabriel') ||
+      handle === 'G@bby';
+
     const newUser: UserProfile = {
-      id: 'usr_' + Date.now(),
-      name,
+      id: isOwner ? 'usr_owner_gabriel' : 'usr_' + Date.now(),
+      name: isOwner ? 'Gabriel Tolulope' : name,
       email,
-      avatarUrl: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`,
-      handle: `@${email.split('@')[0]}`,
+      avatarUrl: isOwner
+        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+        : `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`,
+      handle: handle || (isOwner ? 'G@bby' : `@${email.split('@')[0]}`),
     };
     setUser(newUser);
+    try {
+      localStorage.setItem('streamhub_user', JSON.stringify(newUser));
+    } catch {}
     setIsAuthModalOpen(false);
   }, []);
 
   const logout = useCallback(() => {
     setUser(null);
+    try {
+      localStorage.removeItem('streamhub_user');
+    } catch {}
   }, []);
 
   const openAuthModal = useCallback(() => setIsAuthModalOpen(true), []);

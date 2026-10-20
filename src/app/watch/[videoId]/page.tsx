@@ -276,10 +276,10 @@ export default function WatchPage() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-[#090a0f] p-4 lg:p-6 max-w-[1920px] mx-auto">
+    <div className="w-full min-h-screen bg-[#090a0f] p-2.5 sm:p-4 lg:p-6 max-w-[1920px] mx-auto overflow-x-hidden min-w-0">
       <div
         className={`flex flex-col ${
-          isTheater ? 'space-y-6' : 'xl:flex-row gap-6'
+          isTheater ? 'space-y-6' : 'xl:flex-row gap-4 sm:gap-6'
         }`}
       >
         {/* Main Column: Player, Video Info, Comments */}
