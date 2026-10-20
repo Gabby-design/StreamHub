@@ -98,9 +98,9 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     setActiveSrc(getInitialSrc());
   }, [getInitialSrc]);
 
-  // Shield state: Absorbs first ad-trigger click & enforces sandbox protection
+  // Shield state: Absorbs first ad-trigger click & neutralizes popups
   const [absorbClick, setAbsorbClick] = useState(true);
-  const [isSandboxed, setIsSandboxed] = useState(true);
+  const [isSandboxed, setIsSandboxed] = useState(false);
 
   useEffect(() => {
     setAbsorbClick(true);

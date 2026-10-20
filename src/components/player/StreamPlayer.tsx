@@ -97,9 +97,9 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
     setHasVideoError(false);
   }, [activeSrc]);
 
-  // Shield state: Absorbs first ad-trigger click & enforces sandbox protection
+  // Shield state: Absorbs first ad-trigger click & neutralizes popups
   const [absorbClick, setAbsorbClick] = useState(true);
-  const [isSandboxed, setIsSandboxed] = useState(true);
+  const [isSandboxed, setIsSandboxed] = useState(false);
 
   useEffect(() => {
     setAbsorbClick(true);
@@ -707,16 +707,16 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
             </span>
             <span className="text-slate-500">•</span>
             <span className="text-slate-400 text-[11px]">
-              {isSandboxed ? 'Sandbox popups & ad redirects blocked' : 'Unrestricted playback mode'}
+              {isSandboxed ? 'Strict sandbox mode active' : 'Click-shield active • Popups & redirects blocked'}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsSandboxed(!isSandboxed)}
               className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] font-medium transition"
-              title="Toggle if an embed provider displays a sandbox warning"
+              title="Toggle sandbox mode if provider requests it"
             >
-              {isSandboxed ? 'Bypass Sandbox' : 'Enable Sandbox'}
+              {isSandboxed ? 'Disable Sandbox' : 'Enable Sandbox'}
             </button>
             {streamServers && streamServers.length > 1 && (
               <button

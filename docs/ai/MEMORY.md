@@ -11,7 +11,7 @@
 
 - Typing into search input must only mutate local `inputVal`; global `searchQuery` is only dispatched on explicit Enter / submit / suggestion selection.
 - All devices initialize with `user = null` displaying a dedicated "Sign In" button instead of any mock profile picture.
-- Streaming embed iframes enforce `sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"` with `referrerPolicy="no-referrer"`, first-click absorbing overlay, beforeunload guards, and CSP frame-src domain restrictions. Users have immediate "Switch Server" failover and sandbox bypass toggle if a host requires it.
+- Streaming embed iframes enforce ad protection via a transparent click-absorbing overlay (absorbing first click ad trigger), `window.open` nullifier on watch routes, window beforeunload guards, CSP frame-src restrictions, AutoEmbed as default Server 1 (with VidLink Pro mirror), and optional toggleable sandbox mode to bypass provider sandbox checks.
 
 ## Architecture
 

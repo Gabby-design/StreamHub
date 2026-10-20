@@ -123,25 +123,25 @@ export function buildStreamServers(
 
   const servers: Array<{ name: string; url: string; isEmbed: boolean; quality: string }> = [];
 
-  // Server 1: VidLink Pro (Zero sandbox error, clean player with native +10s forward / -10s rewind)
+  // Server 1: AutoEmbed (Universal streaming catalog - instant 1080p playback)
   if (numericId) {
     servers.push({
-      name: 'Server 1 (1080p VidLink Pro)',
+      name: 'Server 1 (1080p AutoEmbed)',
       url: isTv
-        ? `https://vidlink.pro/tv/${numericId}/${season}/${episode}?primaryColor=6366f1&title=true&poster=true`
-        : `https://vidlink.pro/movie/${numericId}?primaryColor=6366f1&title=true&poster=true`,
+        ? `https://autoembed.co/tv/tmdb/${numericId}-${season}-${episode}`
+        : `https://autoembed.co/movie/tmdb/${numericId}`,
       isEmbed: true,
       quality: '1080p',
     });
   }
 
-  // Server 2: AutoEmbed (Clean multi-source failover)
+  // Server 2: VidLink Pro (Fast 1080p mirror with seek controls)
   if (numericId) {
     servers.push({
-      name: `Server ${servers.length + 1} (1080p AutoEmbed)`,
+      name: `Server ${servers.length + 1} (1080p VidLink Pro)`,
       url: isTv
-        ? `https://autoembed.co/tv/tmdb/${numericId}-${season}-${episode}`
-        : `https://autoembed.co/movie/tmdb/${numericId}`,
+        ? `https://vidlink.pro/tv/${numericId}/${season}/${episode}?primaryColor=6366f1&title=true&poster=true`
+        : `https://vidlink.pro/movie/${numericId}?primaryColor=6366f1&title=true&poster=true`,
       isEmbed: true,
       quality: '1080p',
     });
@@ -289,7 +289,7 @@ export const CURATED_MOVIES: Video[] = [
     imdbId: 'tt22022452',
     title: 'Inside Out 2',
     description: 'Joy, Sadness, Anger, Fear and Disgust have been running a successful operation by all accounts. However, when Anxiety, Envy, Ennui and Embarrassment show up, the headquarters undergoes a sudden demolition.',
-    videoUrl: 'https://vidlink.pro/movie/1022789?primaryColor=6366f1',
+    videoUrl: 'https://autoembed.co/movie/tmdb/1022789',
     thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/hLuPF9HxtjbS7ZzSjMRG3RpUffp.jpg',
     posterUrl: 'https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/hLuPF9HxtjbS7ZzSjMRG3RpUffp.jpg',
