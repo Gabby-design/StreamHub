@@ -814,16 +814,15 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
             title={title || 'Video Player'}
             suppressHydrationWarning={true}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="no-referrer"
-            sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"
+            referrerPolicy="strict-origin-when-cross-origin"
             allowFullScreen
             className="h-full w-full border-0"
           />
-          {/* Ad-Shield & Theater Overlay Controls */}
+          {/* Cinema Stream & Theater Overlay Controls */}
           <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
-            <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/75 border border-emerald-500/40 text-[10px] font-bold text-emerald-400 backdrop-blur-md shadow-lg">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Ad-Shield Active</span>
+            <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/75 border border-indigo-500/40 text-[10px] font-bold text-indigo-400 backdrop-blur-md shadow-lg">
+              <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
+              <span>Cinema Stream Active</span>
             </div>
             {onToggleTheater && (
               <button
@@ -837,7 +836,7 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
           </div>
         </div>
 
-        {/* Mobile Ad-Shield Status & Mirror Switcher */}
+        {/* Mobile Stream Status & Mirror Switcher */}
         <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-[#11131a] border border-white/10 text-xs">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
@@ -845,11 +844,11 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
             <span className="font-semibold text-emerald-400 text-xs">
-              Ad-Shield Active
+              Cinema Stream Active
             </span>
             <span className="text-slate-500">•</span>
             <span className="text-slate-400 text-[11px]">
-              Popups and third-party site redirects are blocked.
+              Full HD 1080p stream connected without sandbox restrictions.
             </span>
           </div>
           {streamServers && streamServers.length > 1 && (

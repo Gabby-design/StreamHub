@@ -12,6 +12,7 @@
 - Typing into search input must only mutate local `inputVal`; global `searchQuery` is only dispatched on explicit Enter / submit / suggestion selection.
 - All devices initialize with `user = null` displaying a dedicated "Sign In" button instead of any mock profile picture.
 - Viewport explicitly exports `device-width` and `initialScale: 1` with strict horizontal overflow constraints.
+- Streaming embed iframes omit `sandbox` and use `referrerPolicy="strict-origin-when-cross-origin"` so external streaming hosts (VidSrc, MultiEmbed) do not reject playback with sandbox errors.
 
 ## Architecture
 
