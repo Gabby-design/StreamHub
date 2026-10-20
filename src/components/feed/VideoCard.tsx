@@ -102,12 +102,37 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
           {video.duration}
         </div>
 
-        {/* HLS Stream badge if applicable */}
-        {video.isHls && (
-          <div className="absolute top-2 left-2 rounded-md bg-indigo-600/90 px-1.5 py-0.5 text-[10px] font-bold text-white tracking-wider uppercase backdrop-blur-sm">
-            HLS
-          </div>
-        )}
+        {/* Resolution badge (1080p / 720p / 4K) */}
+        <div className="absolute top-2 right-2 rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 px-2 py-0.5 text-[10px] font-bold text-white tracking-wider backdrop-blur-md shadow-lg shadow-indigo-950/50 flex items-center gap-1 border border-white/20">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          {video.resolution || (video.mediaType === 'movie' || video.category === 'Movies' ? '1080p' : '720p')}
+        </div>
+
+        {/* Media Type / Format badge */}
+        <div className="absolute top-2 left-2 flex items-center gap-1">
+          {video.isLive ? (
+            <div className="rounded-md bg-red-600/90 border border-red-400/40 px-2 py-0.5 text-[10px] font-bold text-white tracking-wider uppercase backdrop-blur-sm flex items-center gap-1 shadow-lg shadow-red-950/60">
+              <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping" />
+              LIVE
+            </div>
+          ) : video.isHls ? (
+            <div className="rounded-md bg-indigo-600/90 px-1.5 py-0.5 text-[10px] font-bold text-white tracking-wider uppercase backdrop-blur-sm">
+              HLS 4K
+            </div>
+          ) : video.mediaType === 'movie' || video.category === 'Movies' ? (
+            <div className="rounded-md bg-purple-600/90 border border-purple-400/30 px-1.5 py-0.5 text-[10px] font-bold text-white tracking-wider uppercase backdrop-blur-sm">
+              Full Movie
+            </div>
+          ) : video.mediaType === 'anime' || video.category === 'Anime' ? (
+            <div className="rounded-md bg-sky-600/90 border border-sky-400/30 px-1.5 py-0.5 text-[10px] font-bold text-white tracking-wider uppercase backdrop-blur-sm">
+              Full Series
+            </div>
+          ) : video.mediaType === 'cartoon' || video.category === 'Cartoons' ? (
+            <div className="rounded-md bg-emerald-600/90 border border-emerald-400/30 px-1.5 py-0.5 text-[10px] font-bold text-white tracking-wider uppercase backdrop-blur-sm">
+              Full Show
+            </div>
+          ) : null}
+        </div>
       </Link>
 
       {/* Video Metadata */}
@@ -142,10 +167,14 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
             )}
           </Link>
 
-          <div className="mt-1 flex items-center text-xs text-slate-500 gap-1.5">
-            <span>{formatViews(video.views)} views</span>
+          <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-400">
+            <span className="rounded bg-indigo-500/15 border border-indigo-500/30 px-1.5 py-0.2 text-[10px] font-bold text-indigo-300">
+              {video.resolution || '1080p'} Full HD
+            </span>
             <span>•</span>
-            <span>{video.createdAt}</span>
+            <span className="text-slate-500">{formatViews(video.views)} views</span>
+            <span>•</span>
+            <span className="text-slate-500">{video.createdAt}</span>
           </div>
         </div>
 

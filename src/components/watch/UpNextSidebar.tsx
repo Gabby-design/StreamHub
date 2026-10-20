@@ -61,6 +61,9 @@ export const UpNextSidebar: React.FC<UpNextSidebarProps> = ({ currentVideoId }) 
               <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 py-0.2 text-[10px] font-semibold text-white">
                 {video.duration}
               </span>
+              <span className="absolute top-1 right-1 rounded bg-indigo-600/90 border border-white/20 px-1 py-0.2 text-[9px] font-bold text-white shadow-sm">
+                {video.resolution || (video.mediaType === 'movie' || video.category === 'Movies' ? '1080p' : '720p')}
+              </span>
               {video.isHls && (
                 <span className="absolute top-1 left-1 rounded bg-indigo-600/90 px-1 py-0.2 text-[9px] font-bold text-white uppercase">
                   HLS
@@ -79,9 +82,11 @@ export const UpNextSidebar: React.FC<UpNextSidebarProps> = ({ currentVideoId }) 
                   <CheckCircle className="h-3 w-3 text-indigo-400 flex-shrink-0" />
                 )}
               </p>
-              <p className="text-[10px] text-slate-500 mt-0.5">
-                {formatViews(video.views)} views • {video.createdAt}
-              </p>
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-1">
+                <span className="text-emerald-400 font-semibold">{video.resolution || '1080p'}</span>
+                <span>•</span>
+                <span>{formatViews(video.views)} views</span>
+              </div>
             </div>
           </Link>
         ))}

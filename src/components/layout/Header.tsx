@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { Video } from '@/types';
 import {
   Menu,
   Search,
@@ -16,6 +17,7 @@ import {
   Sliders,
   CheckCircle2,
   Film,
+  Loader2,
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -28,6 +30,7 @@ export const Header: React.FC = () => {
     searchQuery,
     setSearchQuery,
     videos,
+    addDiscoveredVideos,
   } = useApp();
 
   const [inputVal, setInputVal] = useState(searchQuery);
@@ -35,15 +38,58 @@ export const Header: React.FC = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(3);
+  const [liveSuggestions, setLiveSuggestions] = useState<Video[]>([]);
+  const [isSearchingLive, setIsSearchingLive] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Sync internal search input with global query
   useEffect(() => {
     setInputVal(searchQuery);
   }, [searchQuery]);
+
+  // Live search debounced fetch for suggestions
+  useEffect(() => {
+    const trimmed = inputVal.trim();
+    if (!trimmed || trimmed.length < 2) {
+      setLiveSuggestions([]);
+      setIsSearchingLive(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setIsSearchingLive(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/movies?q=${encodeURIComponent(trimmed)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!isCancelled && Array.isArray(data?.videos)) {
+            setLiveSuggestions(data.videos.slice(0, 7));
+            addDiscoveredVideos(data.videos);
+          }
+        }
+      } catch {
+        // Silently handle
+      } finally {
+        if (!isCancelled) setIsSearchingLive(false);
+      }
+    }, 200);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [inputVal, addDiscoveredVideos]);
 
   // Click outside listener
   useEffect(() => {
@@ -63,23 +109,35 @@ export const Header: React.FC = () => {
   }, []);
 
   const handleSearchSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setSearchQuery(inputVal);
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const clean = inputVal.trim();
+    if (!clean) return;
+    setSearchQuery(clean);
     setShowSuggestions(false);
-    if (window.location.pathname !== '/') {
-      router.push(`/?search=${encodeURIComponent(inputVal)}`);
+    setShowMobileSearch(false);
+    if (typeof window !== 'undefined') {
+      if (window.location.pathname !== '/') {
+        router.push(`/?search=${encodeURIComponent(clean)}`);
+      } else {
+        window.history.replaceState(null, '', `/?search=${encodeURIComponent(clean)}`);
+      }
     }
   };
 
-  const filteredSuggestions = inputVal.trim()
-    ? videos
-        .filter((v) =>
-          v.title.toLowerCase().includes(inputVal.toLowerCase()) ||
-          v.channel.name.toLowerCase().includes(inputVal.toLowerCase()) ||
-          v.category.toLowerCase().includes(inputVal.toLowerCase())
-        )
-        .slice(0, 5)
-    : [];
+  const combinedSuggestions = React.useMemo(() => {
+    if (!inputVal.trim()) return [];
+    if (liveSuggestions.length > 0) return liveSuggestions;
+    return videos
+      .filter((v) =>
+        v.title.toLowerCase().includes(inputVal.toLowerCase()) ||
+        v.channel.name.toLowerCase().includes(inputVal.toLowerCase()) ||
+        v.category.toLowerCase().includes(inputVal.toLowerCase())
+      )
+      .slice(0, 5);
+  }, [inputVal, liveSuggestions, videos]);
 
   const notifications = [
     {
@@ -103,8 +161,8 @@ export const Header: React.FC = () => {
   ];
 
   return (
-    <header className="sticky top-0 z-40 h-16 w-full border-b border-white/5 bg-[#090a0f]/90 backdrop-blur-xl px-4 lg:px-6">
-      <div className="flex h-full items-center justify-between gap-4">
+    <header className="sticky top-0 z-40 w-full border-b border-white/5 bg-[#090a0f]/90 backdrop-blur-xl px-4 lg:px-6">
+      <div className="flex h-16 items-center justify-between gap-4">
         {/* Left Section: Menu Toggle & Logo */}
         <div className="flex items-center gap-4">
           <button
@@ -129,60 +187,92 @@ export const Header: React.FC = () => {
 
         {/* Center Section: Autocomplete Search Bar */}
         <div ref={searchContainerRef} className="relative flex-1 max-w-xl mx-2 hidden sm:block">
-          <form onSubmit={handleSearchSubmit} className="relative flex items-center w-full">
+          <form
+            action="javascript:void(0)"
+            onSubmit={handleSearchSubmit}
+            className="relative flex items-center w-full"
+          >
             <div className="relative w-full">
               <input
                 type="text"
-                placeholder="Search videos, channels, topics..."
+                placeholder="Search movies, anime, cartoons..."
                 value={inputVal}
                 onFocus={() => setShowSuggestions(true)}
                 onChange={(e) => {
-                  setInputVal(e.target.value);
+                  const val = e.target.value;
+                  setInputVal(val);
                   setShowSuggestions(true);
+                  setSearchQuery(val.trim());
                 }}
-                className="w-full rounded-full border border-white/10 bg-white/5 pl-11 pr-10 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-500/80 focus:bg-[#11131a] focus:outline-none transition shadow-inner"
+                className="w-full rounded-full border border-white/10 bg-white/5 pl-11 pr-20 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-500/80 focus:bg-[#11131a] focus:outline-none transition shadow-inner"
               />
               <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
-              {inputVal && (
+              <div className="absolute right-2.5 top-1.5 flex items-center gap-1">
+                {inputVal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInputVal('');
+                      setSearchQuery('');
+                    }}
+                    className="p-1 text-slate-400 hover:text-white transition"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
                 <button
-                  type="button"
-                  onClick={() => {
-                    setInputVal('');
-                    setSearchQuery('');
-                  }}
-                  className="absolute right-3.5 top-2.5 text-slate-400 hover:text-white"
+                  type="submit"
+                  className="rounded-full bg-indigo-600 hover:bg-indigo-500 p-1.5 text-white transition shadow-sm"
+                  aria-label="Search"
                 >
-                  <X className="h-4 w-4" />
+                  <Search className="h-3.5 w-3.5" />
                 </button>
-              )}
+              </div>
             </div>
           </form>
 
           {/* Autocomplete Dropdown */}
-          {showSuggestions && filteredSuggestions.length > 0 && (
-            <div className="absolute left-0 right-0 top-12 rounded-2xl glass-dropdown p-2 shadow-2xl z-50">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-3 py-1">
-                Suggestions
+          {showSuggestions && (combinedSuggestions.length > 0 || isSearchingLive) && (
+            <div className="absolute left-0 right-0 top-12 rounded-2xl glass-dropdown p-2 shadow-2xl z-50 border border-white/10 bg-[#0e1017]/95 backdrop-blur-xl">
+              <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-3 py-1">
+                <span>Suggestions</span>
+                {isSearchingLive && (
+                  <span className="flex items-center gap-1 text-indigo-400 font-normal normal-case">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Searching movies...
+                  </span>
+                )}
               </div>
-              {filteredSuggestions.map((item) => (
+              {combinedSuggestions.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => {
                     setInputVal(item.title);
                     setSearchQuery(item.title);
                     setShowSuggestions(false);
+                    addDiscoveredVideos([item]);
                     router.push(`/watch/${item.id}`);
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left hover:bg-white/10 transition group"
                 >
-                  <Search className="h-4 w-4 text-slate-400 group-hover:text-indigo-400 flex-shrink-0" />
-                  <div className="truncate">
-                    <p className="text-sm text-slate-200 group-hover:text-white truncate font-medium">
+                  <img
+                    src={item.posterUrl || item.thumbnailUrl}
+                    alt={item.title}
+                    className="h-10 w-8 rounded-lg object-cover flex-shrink-0 bg-slate-800 border border-white/10 group-hover:border-indigo-500/50 transition"
+                  />
+                  <div className="truncate flex-1 min-w-0">
+                    <p className="text-sm text-slate-200 group-hover:text-indigo-300 truncate font-medium">
                       {item.title}
                     </p>
-                    <span className="text-xs text-slate-400">
-                      {item.channel.name} • {item.category}
-                    </span>
+                    <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                      <span>{item.channel.name}</span>
+                      <span>•</span>
+                      <span className="text-slate-500">{item.createdAt}</span>
+                      <span className="rounded bg-indigo-500/20 text-indigo-300 px-1.5 py-0.2 text-[9px] font-bold">
+                        {item.resolution || '1080p'}
+                      </span>
+                    </div>
                   </div>
                 </button>
               ))}
@@ -192,6 +282,15 @@ export const Header: React.FC = () => {
 
         {/* Right Section: Actions & Auth */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Mobile Search Toggle */}
+          <button
+            onClick={() => setShowMobileSearch(!showMobileSearch)}
+            className="sm:hidden rounded-full p-2 text-slate-300 hover:bg-white/10 hover:text-white transition"
+            aria-label="Toggle search"
+          >
+            <Search className="h-5 w-5 text-indigo-400" />
+          </button>
+
           {/* Upload Button */}
           <Link
             href="/upload"
@@ -244,7 +343,7 @@ export const Header: React.FC = () => {
           </div>
 
           {/* User Profile / Auth Button */}
-          {user ? (
+          {mounted && user ? (
             <div ref={userMenuRef} className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
@@ -302,7 +401,7 @@ export const Header: React.FC = () => {
                 </div>
               )}
             </div>
-          ) : (
+          ) : mounted ? (
             <button
               onClick={openAuthModal}
               className="flex items-center gap-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 px-4 py-1.5 text-sm font-medium text-white shadow-lg shadow-indigo-600/20 transition"
@@ -310,9 +409,47 @@ export const Header: React.FC = () => {
               <User className="h-4 w-4" />
               <span>Sign In</span>
             </button>
+          ) : (
+            <div className="h-8 w-20 rounded-full bg-white/5 animate-pulse" />
           )}
         </div>
       </div>
+
+      {/* Mobile Search Bar Expandable Drawer */}
+      {showMobileSearch && (
+        <div className="sm:hidden pb-3 pt-1 border-t border-white/5">
+          <form
+            action="javascript:void(0)"
+            onSubmit={handleSearchSubmit}
+            className="relative flex items-center w-full"
+          >
+            <input
+              type="text"
+              placeholder="Search movies, anime, cartoons..."
+              value={inputVal}
+              autoFocus
+              onChange={(e) => {
+                const val = e.target.value;
+                setInputVal(val);
+                setSearchQuery(val.trim());
+              }}
+              className="w-full rounded-xl border border-white/10 bg-[#11131a] pl-10 pr-10 py-2 text-sm text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none transition"
+            />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <button
+              type="button"
+              onClick={() => {
+                setInputVal('');
+                setSearchQuery('');
+                setShowMobileSearch(false);
+              }}
+              className="absolute right-2.5 top-2 text-slate-400 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </form>
+        </div>
+      )}
     </header>
   );
 };

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Video } from '@/types';
+import { CURATED_MOVIES } from '@/lib/movieApi';
 
 export async function GET(req: NextRequest) {
   try {
@@ -7,9 +8,19 @@ export async function GET(req: NextRequest) {
     const query = searchParams.get('q');
     const limit = searchParams.get('limit') || '12';
 
+    const cleanQ = (query || '').toLowerCase().trim();
+    const curatedMatches: Video[] = CURATED_MOVIES.filter((m) => {
+      if (m.category !== 'Anime') return false;
+      if (!cleanQ) return true;
+      return (
+        m.title.toLowerCase().includes(cleanQ) ||
+        m.tags.some((t) => t.toLowerCase().includes(cleanQ))
+      );
+    });
+
     let endpoint = `https://kitsu.io/api/edge/anime?page[limit]=${limit}&sort=-userCount`;
-    if (query && query.trim()) {
-      endpoint = `https://kitsu.io/api/edge/anime?filter[text]=${encodeURIComponent(query.trim())}&page[limit]=${limit}`;
+    if (cleanQ) {
+      endpoint = `https://kitsu.io/api/edge/anime?filter[text]=${encodeURIComponent(cleanQ)}&page[limit]=${limit}`;
     }
 
     const response = await fetch(endpoint, {
@@ -20,15 +31,13 @@ export async function GET(req: NextRequest) {
       next: { revalidate: 3600 },
     });
 
-    if (!response.ok) {
-      return NextResponse.json({ error: 'Failed to fetch anime data' }, { status: response.status });
-    }
+    let liveVideos: Video[] = [];
+    if (response.ok) {
+      const data = await response.json();
+      const animeList = data.data || [];
 
-    const data = await response.json();
-    const animeList = data.data || [];
-
-    const videos: Video[] = animeList
-      .filter((item: any) => item.attributes?.youtubeVideoId || item.attributes?.posterImage)
+      liveVideos = animeList
+        .filter((item: any) => item.attributes?.youtubeVideoId || item.attributes?.posterImage)
       .map((item: any) => {
         const attr = item.attributes;
         const ytId = attr.youtubeVideoId;
@@ -36,16 +45,23 @@ export async function GET(req: NextRequest) {
         const title = attr.canonicalTitle || attr.titles?.en || attr.titles?.en_jp || 'Anime Stream';
         const studio = attr.ageRatingGuide || 'Animation Studio';
 
+        const fullMultiEmbed = `https://multiembed.mov/?video_id=${encodeURIComponent(title)}&s=1&e=1`;
+        const fullVidSrc = `https://vidsrc.to/embed/tv/${item.id}/1/1`;
+        const trailerUrl = ytId
+          ? `https://www.youtube-nocookie.com/embed/${ytId}`
+          : `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(title + ' anime official trailer')}`;
+
         return {
           id: `anime-${item.id}`,
           title: `${title} (English Sub/Dub)`,
           description: attr.synopsis || 'Official anime stream and broadcast presentation.',
-          videoUrl: ytId
-            ? `https://www.youtube-nocookie.com/embed/${ytId}`
-            : 'https://vjs.zencdn.net/v/oceans.mp4',
-          streamServers: ytId
-            ? [{ name: 'Trailer (HD)', url: `https://www.youtube-nocookie.com/embed/${ytId}`, isEmbed: true }]
-            : undefined,
+          videoUrl: fullMultiEmbed,
+          streamServers: [
+            { name: 'Server 1 (1080p MultiEmbed)', url: fullMultiEmbed, isEmbed: true, quality: '1080p' },
+            { name: 'Server 2 (720p VidSrc)', url: fullVidSrc, isEmbed: true, quality: '720p' },
+            { name: 'Trailer (HD Preview)', url: trailerUrl, isEmbed: true, quality: 'HD' },
+          ],
+          resolution: '1080p' as const,
           thumbnailUrl: poster || 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1080&auto=format&fit=crop&q=80',
           duration: attr.episodeCount ? `${attr.episodeCount} Ep` : '24:00',
           durationSec: 1440,
@@ -67,8 +83,14 @@ export async function GET(req: NextRequest) {
           isHls: false,
         };
       });
+    }
 
-    return NextResponse.json({ videos });
+    const combined = [
+      ...curatedMatches,
+      ...liveVideos.filter((lv) => !curatedMatches.some((cm) => cm.id === lv.id)),
+    ];
+
+    return NextResponse.json({ videos: combined });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Internal Error' }, { status: 500 });
   }

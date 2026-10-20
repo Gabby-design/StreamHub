@@ -46,10 +46,52 @@ export interface Video {
   tags: string[];
   isHls?: boolean;
   imdbId?: string;
+  tmdbId?: number | string;
+  posterUrl?: string;
+  backdropUrl?: string;
+  logoUrl?: string;
+  tagline?: string;
+  genres?: string[];
+  releaseDate?: string;
+  budget?: number;
+  revenue?: number;
+  status?: string;
+  collectionName?: string;
+  director?: { name: string; avatarUrl?: string };
+  cast?: { name: string; character: string; avatarUrl?: string }[];
+  numberOfSeasons?: number;
+  numberOfEpisodes?: number;
+  episodes?: {
+    id: number | string;
+    episodeNumber: number;
+    seasonNumber: number;
+    title: string;
+    overview: string;
+    stillUrl?: string;
+    runtime?: number;
+    airDate?: string;
+  }[];
   mediaType?: 'movie' | 'anime' | 'cartoon' | 'series' | 'video';
   rating?: string | number;
   trailerUrl?: string;
-  streamServers?: { name: string; url: string; isEmbed: boolean }[];
+  resolution?: '4K' | '1080p' | '720p' | '480p';
+  streamServers?: { name: string; url: string; isEmbed: boolean; quality?: string }[];
+  isLive?: boolean;
+  liveViewers?: number;
+  liveStartedAt?: string;
+  isUpcoming?: boolean;
+}
+
+
+export interface LiveChatMessage {
+  id: string;
+  sender: string;
+  avatar: string;
+  badge?: string;
+  message: string;
+  timestamp: string;
+  isSuperChat?: boolean;
+  amount?: string;
 }
 
 export interface UserProfile {

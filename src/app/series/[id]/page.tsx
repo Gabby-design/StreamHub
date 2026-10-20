@@ -117,7 +117,7 @@ export default function SeriesDetailPage() {
           </div>
         </div>
 
-        {/* StreamPlayer Integration with Dual-Mode (HLS / Embed) & Sub/Dub Switcher */}
+        {/* StreamPlayer Integration with Dual-Mode (HLS / Embed), Multi-Server & Sub/Dub Switcher */}
         {selectedEpisode && (
           <StreamPlayer
             src={selectedEpisode.streamUrl}
@@ -126,6 +126,8 @@ export default function SeriesDetailPage() {
             englishTitle={`${series.titleEnglish} - ${selectedEpisode.title}`}
             poster={series.bannerUrl || selectedEpisode.thumbnailUrl}
             isHls={selectedEpisode.isHls}
+            streamServers={selectedEpisode.streamServers}
+            resolution={selectedEpisode.resolution || series.resolution || '1080p'}
             isTheater={isTheater}
             onToggleTheater={() => setIsTheater(!isTheater)}
             initialAudioTrack={activeAudioTrack}
@@ -171,6 +173,10 @@ export default function SeriesDetailPage() {
                   <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Play className="h-5 w-5 text-white fill-white" />
                   </div>
+                  {/* Resolution Badge */}
+                  <span className="absolute top-1 right-1 rounded bg-indigo-600/90 backdrop-blur-md px-1.5 py-0.2 text-[9px] font-extrabold text-white tracking-wider border border-white/20 shadow-md">
+                    {ep.resolution || series.resolution || '1080p'}
+                  </span>
                   <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 py-0.2 text-[9px] font-semibold text-white">
                     {ep.duration}
                   </span>
@@ -236,6 +242,12 @@ export default function SeriesDetailPage() {
               <span className="flex items-center gap-1 rounded-md bg-amber-500/20 text-amber-400 px-2 py-0.5 font-bold border border-amber-500/30">
                 <Star className="h-3 w-3 fill-amber-400" />
                 {series.score} Rating
+              </span>
+              <span className="rounded-md bg-emerald-500/15 text-emerald-400 px-2 py-0.5 font-bold border border-emerald-500/30">
+                {series.resolution || '1080p'} Full HD
+              </span>
+              <span className="rounded-md bg-indigo-500/15 text-indigo-400 px-2 py-0.5 font-bold border border-indigo-500/30">
+                Dual Audio (Sub & Dub)
               </span>
               <span className="rounded-md bg-white/5 text-slate-300 px-2 py-0.5 border border-white/10">
                 {series.studio}

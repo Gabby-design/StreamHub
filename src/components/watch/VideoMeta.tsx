@@ -64,10 +64,113 @@ export const VideoMeta: React.FC<VideoMetaProps> = ({ video }) => {
 
   return (
     <div className="mt-4">
-      {/* Title */}
-      <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-snug">
-        {video.title}
-      </h1>
+      {/* Title & Tagline */}
+      <div>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight leading-snug">
+          {video.title}
+        </h1>
+        {video.tagline && (
+          <p className="mt-1 text-sm italic text-indigo-300/80 font-medium tracking-wide">
+            &ldquo;{video.tagline}&rdquo;
+          </p>
+        )}
+      </div>
+
+      {/* TMDB Quick Stats & Badges Bar */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {video.rating && (
+          <div className="flex items-center gap-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 text-xs font-bold text-amber-300">
+            <span>★</span>
+            <span>{video.rating}</span>
+            <span className="text-[10px] text-amber-400/70 font-normal">/ 10 TMDB</span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-1 rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-xs font-semibold text-slate-300">
+          <span>{video.createdAt || video.releaseDate}</span>
+        </div>
+
+        {video.duration && (
+          <div className="flex items-center gap-1 rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-xs font-semibold text-slate-300">
+            <span>{video.duration}</span>
+          </div>
+        )}
+
+        <div className="rounded-lg bg-indigo-600/20 border border-indigo-500/30 px-2.5 py-1 text-xs font-bold text-indigo-300">
+          {video.resolution || '1080p'} Full HD
+        </div>
+
+        {video.status && (
+          <div className="rounded-lg bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 text-xs font-medium text-emerald-300">
+            {video.status}
+          </div>
+        )}
+
+        {video.collectionName && (
+          <div className="rounded-lg bg-purple-500/15 border border-purple-500/30 px-2.5 py-1 text-xs font-semibold text-purple-300">
+            Part of {video.collectionName}
+          </div>
+        )}
+
+        {video.revenue && video.revenue > 0 && (
+          <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-xs text-emerald-400">
+            Box Office: ${(video.revenue / 1000000).toFixed(0)}M
+          </div>
+        )}
+      </div>
+
+      {/* Genres Chips */}
+      {video.genres && video.genres.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          {video.genres.map((g) => (
+            <span
+              key={g}
+              className="rounded-full bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1 text-xs font-medium text-slate-300 hover:text-white transition cursor-pointer"
+            >
+              {g}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Cast & Director Strip */}
+      {(video.director || (video.cast && video.cast.length > 0)) && (
+        <div className="mt-4 rounded-2xl bg-[#11131a]/80 border border-white/5 p-3.5">
+          <div className="flex items-center justify-between mb-2.5">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Top Cast & Crew
+            </h4>
+            {video.director && (
+              <span className="text-xs text-slate-400">
+                Directed by <strong className="text-white">{video.director.name}</strong>
+              </span>
+            )}
+          </div>
+          {video.cast && video.cast.length > 0 && (
+            <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-white/10">
+              {video.cast.map((actor, idx) => (
+                <div key={idx} className="flex items-center gap-2 flex-shrink-0 bg-white/5 rounded-xl p-1.5 pr-3 border border-white/5">
+                  {actor.avatarUrl ? (
+                    <img
+                      src={actor.avatarUrl}
+                      alt={actor.name}
+                      className="h-9 w-9 rounded-lg object-cover bg-slate-800"
+                    />
+                  ) : (
+                    <div className="h-9 w-9 rounded-lg bg-indigo-600/30 flex items-center justify-center text-xs font-bold text-indigo-300">
+                      {actor.name.charAt(0)}
+                    </div>
+                  )}
+                  <div className="text-left">
+                    <p className="text-xs font-semibold text-white leading-tight">{actor.name}</p>
+                    <p className="text-[10px] text-slate-400 leading-tight">{actor.character}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Channel info and Action Buttons Bar */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4">
@@ -173,7 +276,7 @@ export const VideoMeta: React.FC<VideoMetaProps> = ({ video }) => {
         <div className="flex items-center gap-2 font-semibold text-white text-xs mb-2">
           <span>{video.views.toLocaleString()} views</span>
           <span>•</span>
-          <span>Uploaded {video.createdAt}</span>
+          <span>Released {video.releaseDate || video.createdAt}</span>
           <div className="flex gap-1.5 ml-2">
             {video.tags.map((tag) => (
               <span key={tag} className="text-indigo-400 hover:underline cursor-pointer">

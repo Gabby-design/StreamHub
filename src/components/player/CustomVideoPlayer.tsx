@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import Link from 'next/link';
 import Hls from 'hls.js';
 import {
   Play,
@@ -16,12 +17,15 @@ import {
   Check,
   Loader2,
   Server,
+  AlertCircle,
+  Film,
 } from 'lucide-react';
 
 interface StreamServerOption {
   name: string;
   url: string;
   isEmbed?: boolean;
+  quality?: string;
 }
 
 interface CustomVideoPlayerProps {
@@ -33,6 +37,8 @@ interface CustomVideoPlayerProps {
   onToggleTheater?: () => void;
   streamServers?: StreamServerOption[];
   title?: string;
+  resolution?: string;
+  isUpcoming?: boolean;
 }
 
 interface QualityLevel {
@@ -50,8 +56,36 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   onToggleTheater,
   streamServers,
   title = 'Video Player',
+  resolution,
+  isUpcoming = false,
 }) => {
   const [isMounted, setIsMounted] = useState(false);
+
+  const isUpcomingTitle = Boolean(
+    isUpcoming ||
+      title?.toLowerCase().includes('brand new day') ||
+      title?.toLowerCase().includes('upcoming')
+  );
+
+  // Auto-default to the first full 1080p/720p stream server, or trailer if upcoming/unreleased
+  const getInitialSrc = useCallback(() => {
+    if (streamServers && streamServers.length > 0) {
+      if (isUpcomingTitle) {
+        const trailer = streamServers.find(
+          (s) => s.name.toLowerCase().includes('trailer') || s.url.includes('youtube')
+        );
+        if (trailer) return trailer.url;
+      }
+
+      const fullServer = streamServers.find(
+        (s) => !s.name.toLowerCase().includes('trailer') && !s.url.includes('youtube')
+      );
+      if (fullServer) return fullServer.url;
+      return streamServers[0].url;
+    }
+    return src;
+  }, [src, streamServers, isUpcomingTitle]);
+
   const [activeSrc, setActiveSrc] = useState(src);
 
   useEffect(() => {
@@ -59,8 +93,8 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   }, []);
 
   useEffect(() => {
-    setActiveSrc(src);
-  }, [src]);
+    setActiveSrc(getInitialSrc());
+  }, [getInitialSrc]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -100,15 +134,52 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  const [hasVideoError, setHasVideoError] = useState(false);
+
+  useEffect(() => {
+    setHasVideoError(false);
+  }, [activeSrc]);
+
+  const activeServer = streamServers?.find((s) => s.url === activeSrc);
+
+  const isDirectMedia = Boolean(
+    activeSrc &&
+      (activeSrc.endsWith('.mp4') ||
+        activeSrc.includes('.mp4?') ||
+        activeSrc.endsWith('.m3u8') ||
+        activeSrc.includes('.m3u8?') ||
+        activeSrc.endsWith('.webm') ||
+        activeSrc.includes('.webm?') ||
+        activeSrc.endsWith('.ogg') ||
+        activeSrc.includes('.ogg?') ||
+        activeSrc.startsWith('blob:') ||
+        activeSrc.startsWith('data:video'))
+  );
+
+  const isExplicitEmbedDomain = Boolean(
+    activeSrc &&
+      (activeSrc.startsWith('youtube:') ||
+        activeSrc.includes('youtube.com') ||
+        activeSrc.includes('youtu.be') ||
+        activeSrc.includes('youtube-nocookie.com') ||
+        activeSrc.includes('vidsrc') ||
+        activeSrc.includes('multiembed') ||
+        activeSrc.includes('2embed') ||
+        activeSrc.includes('vidlink') ||
+        activeSrc.includes('vidfast') ||
+        activeSrc.includes('viduki') ||
+        activeSrc.includes('embed.su') ||
+        activeSrc.includes('autoembed') ||
+        activeSrc.includes('/embed/') ||
+        /^[a-zA-Z0-9_-]{11}$/.test(activeSrc.trim()))
+  );
+
   const isEmbed =
-    activeSrc.startsWith('youtube:') ||
-    activeSrc.includes('youtube.com') ||
-    activeSrc.includes('youtu.be') ||
-    activeSrc.includes('vidsrc') ||
-    activeSrc.includes('multiembed') ||
-    activeSrc.includes('2embed') ||
-    activeSrc.includes('youtube-nocookie.com') ||
-    /^[a-zA-Z0-9_-]{11}$/.test(activeSrc.trim());
+    hasVideoError ||
+    Boolean(
+      activeServer?.isEmbed ??
+      (isExplicitEmbedDomain || !isDirectMedia)
+    );
 
   const getEmbedUrl = (url: string) => {
     if (!url) return '';
@@ -134,8 +205,17 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
       return clean;
     }
 
-    // Streaming server iframe embeds (VidSrc, MultiEmbed, etc.)
-    if (clean.includes('vidsrc') || clean.includes('multiembed') || clean.includes('2embed')) {
+    // Streaming server iframe embeds (VidSrc, MultiEmbed, VidLink, VidFast, EmbedSu, etc.)
+    if (
+      clean.includes('vidsrc') ||
+      clean.includes('multiembed') ||
+      clean.includes('2embed') ||
+      clean.includes('vidlink') ||
+      clean.includes('vidfast') ||
+      clean.includes('viduki') ||
+      clean.includes('embed.su') ||
+      clean.includes('autoembed')
+    ) {
       return clean;
     }
 
@@ -219,6 +299,8 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
               break;
             default:
               hls.destroy();
+              setIsLoading(false);
+              setHasVideoError(true);
               break;
           }
         }
@@ -250,6 +332,10 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
       setIsPlaying(false);
       if (onEndedRef.current) onEndedRef.current();
     };
+    const handleVideoError = () => {
+      setIsLoading(false);
+      setHasVideoError(true);
+    };
 
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('timeupdate', handleTimeUpdate);
@@ -257,6 +343,7 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     video.addEventListener('playing', handlePlaying);
     video.addEventListener('pause', handlePause);
     video.addEventListener('ended', handleVideoEnd);
+    video.addEventListener('error', handleVideoError);
 
     return () => {
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
@@ -265,12 +352,13 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
       video.removeEventListener('playing', handlePlaying);
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('ended', handleVideoEnd);
+      video.removeEventListener('error', handleVideoError);
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
     };
-  }, [src, isHls]);
+  }, [activeSrc, isHls, isEmbed]);
 
   // Controls auto-hide on inactivity
   const handleMouseMove = () => {
@@ -419,34 +507,146 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  const serverSelectorBar = streamServers && streamServers.length > 1 && (
-    <div className="flex items-center gap-2 mb-3 overflow-x-auto py-1 px-1 no-scrollbar">
-      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 flex-shrink-0">
-        <Server className="h-3.5 w-3.5 text-indigo-400" />
-        Source Server:
-      </span>
-      {streamServers.map((srv, idx) => {
-        const isSelected = activeSrc === srv.url;
-        return (
-          <button
-            key={idx}
-            onClick={() => setActiveSrc(srv.url)}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition flex-shrink-0 flex items-center gap-1.5 ${
-              isSelected
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                : 'bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/5'
-            }`}
-          >
-            {srv.name}
-          </button>
-        );
-      })}
+  const activeResolution =
+    activeServer?.quality ||
+    (activeSrc.includes('1080')
+      ? '1080p'
+      : activeSrc.includes('720')
+      ? '720p'
+      : isHls
+      ? '4K'
+      : resolution || '1080p');
+
+  const isCurrentTrailer =
+    activeSrc.includes('youtube') ||
+    activeServer?.name.toLowerCase().includes('trailer') ||
+    activeServer?.quality === 'HD';
+
+  const handleResolutionSelect = (targetRes: '1080p' | '720p' | '4K') => {
+    if (streamServers && streamServers.length > 0) {
+      const match = streamServers.find(
+        (s) =>
+          (s.quality === targetRes || s.name.includes(targetRes)) &&
+          !s.name.toLowerCase().includes('trailer')
+      );
+      if (match) {
+        setActiveSrc(match.url);
+        return;
+      }
+    }
+    if (availableLevels.length > 0) {
+      const targetHeight = targetRes === '1080p' ? 1080 : targetRes === '720p' ? 720 : 2160;
+      const levelMatch = availableLevels.find((lvl) => lvl.height === targetHeight);
+      if (levelMatch) {
+        handleQualityChange(levelMatch.id);
+      }
+    }
+  };
+
+  const serverSelectorBar = (
+    <div className="mb-3 rounded-2xl bg-[#11131a]/85 border border-white/10 p-3 backdrop-blur-md shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-3">
+      {/* Live Stream Status & Current Resolution Indicator */}
+      <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-indigo-500/10 border border-emerald-500/30 text-xs shadow-inner">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
+          <span className="font-extrabold text-emerald-400 uppercase tracking-wider">
+            {activeResolution} {activeResolution === '4K' ? 'Ultra HD' : 'Full HD'}
+          </span>
+          <span className="text-slate-500">•</span>
+          <span className="text-slate-200 font-medium truncate max-w-[160px] sm:max-w-xs">
+            {activeServer?.name || (isCurrentTrailer ? 'Official Preview' : 'Complete 1080p Master')}
+          </span>
+        </div>
+
+        {/* Quick Resolution Switcher Buttons (1080p / 720p / 4K) */}
+        <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
+          <span className="text-[10px] font-bold text-slate-400 uppercase px-1.5 tracking-wider">
+            Quality:
+          </span>
+          {(['1080p', '720p', '4K'] as const).map((res) => {
+            const isResActive = activeResolution === res;
+            return (
+              <button
+                key={res}
+                onClick={() => handleResolutionSelect(res)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
+                  isResActive
+                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/40 ring-1 ring-white/20'
+                    : 'text-slate-400 hover:text-white hover:bg-white/10'
+                }`}
+                title={`Switch playback to ${res}`}
+              >
+                {res}
+                {isResActive && <Check className="h-3 w-3" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Stream Servers Carousel (Full Streams & Trailer) */}
+      {streamServers && streamServers.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5 flex-shrink-0 mr-1">
+            <Server className="h-3.5 w-3.5 text-indigo-400" />
+            Servers:
+          </span>
+          {streamServers.map((srv, idx) => {
+            const isSelected = activeSrc === srv.url;
+            const isTrailerSrv = srv.name.toLowerCase().includes('trailer');
+
+            return (
+              <button
+                key={idx}
+                onClick={() => setActiveSrc(srv.url)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition flex-shrink-0 flex items-center gap-1.5 ${
+                  isSelected
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/40 ring-1 ring-white/20'
+                    : isTrailerSrv
+                    ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20'
+                    : 'bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/5'
+                }`}
+              >
+                <span>{srv.name}</span>
+                {isSelected && <Check className="h-3 w-3 text-white" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
+  const upcomingBanner = isUpcomingTitle && (
+    <div className="mb-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-indigo-500/10 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-200 shadow-xl">
+      <div className="flex items-center gap-3">
+        <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
+        </span>
+        <div>
+          <p className="font-bold text-amber-300 text-sm">Upcoming Theatrical Release</p>
+          <p className="text-slate-300 text-xs mt-0.5">
+            <strong>{title}</strong> is scheduled for release and is currently unreleased in movie theatres and streaming platforms. Currently streaming official 4K preview. Full 1080p movie servers will activate when the film premieres.
+          </p>
+        </div>
+      </div>
+      <Link
+        href="/watch/movie-tt9362722"
+        className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition text-center flex-shrink-0 shadow-lg shadow-indigo-600/30"
+      >
+        Watch Released Spider-Man (1080p)
+      </Link>
     </div>
   );
 
   if (!isMounted) {
     return (
       <div className="w-full">
+        {upcomingBanner}
         {serverSelectorBar}
         <div
           className={`relative w-full overflow-hidden bg-neutral-900 select-none ${
@@ -465,6 +665,7 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
 
     return (
       <div className="w-full">
+        {upcomingBanner}
         {serverSelectorBar}
         <div
           ref={containerRef}
@@ -492,28 +693,63 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
           )}
         </div>
 
-        {youtubeId && (
-          <div className="mt-3 flex items-center justify-between px-3.5 py-2.5 bg-white/[0.03] hover:bg-white/[0.05] transition rounded-xl border border-white/5 text-xs text-slate-300">
+        {youtubeId && isCurrentTrailer ? (
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-transparent rounded-2xl border border-amber-500/30 text-xs text-slate-200 shadow-lg">
             <span className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping inline-block" />
-              If video fails to embed or is restricted by studio copyright:
+              <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping inline-block flex-shrink-0" />
+              <span>
+                {isUpcomingTitle
+                  ? 'Official Preview: Streaming 4K trailer for this upcoming release.'
+                  : 'Currently previewing trailer. Switch to the 1080p Complete Film:'}
+              </span>
             </span>
-            <a
-              href={`https://www.youtube.com/watch?v=${youtubeId}`}
-              target="_blank"
-              rel="noreferrer"
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg transition inline-flex items-center gap-1.5 shrink-0 shadow-md"
-            >
-              Watch on YouTube
-            </a>
+            {!isUpcomingTitle && streamServers && streamServers.find((s) => !s.name.toLowerCase().includes('trailer')) && (
+              <button
+                onClick={() => {
+                  const full = streamServers.find((s) => !s.name.toLowerCase().includes('trailer'));
+                  if (full) setActiveSrc(full.url);
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold rounded-xl transition inline-flex items-center gap-2 shadow-lg shadow-indigo-600/30"
+              >
+                Watch 1080p Full Movie
+              </button>
+            )}
           </div>
-        )}
+        ) : !isDirectMedia ? (
+          <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-slate-300">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-400 flex-shrink-0" />
+              <span>Server mirror notice: If this mirror shows Error 224003 or is unreleased:</span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {streamServers?.filter((s) => s.url !== activeSrc && !s.name.toLowerCase().includes('trailer')).slice(0, 2).map((srv, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveSrc(srv.url)}
+                  className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 text-[11px] font-medium transition"
+                >
+                  Switch to {srv.name.split(' ')[1] || srv.name}
+                </button>
+              ))}
+              <button
+                onClick={() => {
+                  const trailer = streamServers?.find((s) => s.name.toLowerCase().includes('trailer') || s.url.includes('youtube'));
+                  if (trailer) setActiveSrc(trailer.url);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold transition"
+              >
+                Play Official Trailer
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   }
 
   return (
     <div className="w-full">
+      {upcomingBanner}
       {serverSelectorBar}
       <div
         ref={containerRef}

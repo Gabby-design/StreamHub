@@ -1,16 +1,26 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { CategoryPills } from '@/components/feed/CategoryPills';
 import { VideoGrid } from '@/components/feed/VideoGrid';
 import { Video } from '@/types';
 import { Sparkles, Loader2 } from 'lucide-react';
 
-export default function HomePage() {
-  const { videos, selectedCategory, searchQuery, addDiscoveredVideos } = useApp();
+function HomeContent() {
+  const searchParams = useSearchParams();
+  const urlSearch = searchParams.get('search');
+  const { videos, selectedCategory, searchQuery, setSearchQuery, addDiscoveredVideos } = useApp();
   const [onlineVideos, setOnlineVideos] = useState<Video[]>([]);
   const [isSearchingOnline, setIsSearchingOnline] = useState(false);
+
+  // Sync URL search param into AppContext if present
+  useEffect(() => {
+    if (urlSearch && urlSearch !== searchQuery) {
+      setSearchQuery(urlSearch);
+    }
+  }, [urlSearch, searchQuery, setSearchQuery]);
 
   // Dynamic online catalog search across anime, movies, and cartoons
   useEffect(() => {
@@ -24,7 +34,8 @@ export default function HomePage() {
 
       const isMovieFilter = selectedCategory === 'Movies';
       const isCartoonFilter = selectedCategory === 'Cartoons' || selectedCategory === 'Animation';
-      const hasSearch = Boolean(searchQuery.trim());
+      const cleanQ = searchQuery.trim();
+      const hasSearch = Boolean(cleanQ);
 
       if (!isAnimeFilter && !isMovieFilter && !isCartoonFilter && !hasSearch) {
         setOnlineVideos([]);
@@ -38,10 +49,10 @@ export default function HomePage() {
         if (hasSearch) {
           // Query both movie and anime APIs in parallel
           const [movieRes, animeRes] = await Promise.all([
-            fetch(`/api/movies?q=${encodeURIComponent(searchQuery.trim())}`)
+            fetch(`/api/movies?q=${encodeURIComponent(cleanQ)}`)
               .then((r) => r.json())
               .catch(() => null),
-            fetch(`/api/anime?q=${encodeURIComponent(searchQuery.trim())}`)
+            fetch(`/api/anime?q=${encodeURIComponent(cleanQ)}`)
               .then((r) => r.json())
               .catch(() => null),
           ]);
@@ -78,35 +89,43 @@ export default function HomePage() {
       }
     };
 
-    const timer = setTimeout(fetchLiveCatalog, 300);
+    const timer = setTimeout(fetchLiveCatalog, 250);
     return () => {
       isCancelled = true;
       clearTimeout(timer);
     };
   }, [selectedCategory, searchQuery, addDiscoveredVideos]);
 
-  // Combine local videos with live online videos without duplicates
+  // Combine local videos with live online videos, prioritizing online search results
   const allVideos = React.useMemo(() => {
+    if (searchQuery.trim()) {
+      const onlineIds = new Set(onlineVideos.map((v) => v.id));
+      const restVideos = videos.filter((v) => !onlineIds.has(v.id));
+      return [...onlineVideos, ...restVideos];
+    }
     const existingIds = new Set(videos.map((v) => v.id));
     const uniqueOnline = onlineVideos.filter((v) => !existingIds.has(v.id));
     return [...videos, ...uniqueOnline];
-  }, [videos, onlineVideos]);
+  }, [videos, onlineVideos, searchQuery]);
 
   // Filter videos based on category and search query
   const filteredVideos = allVideos.filter((video) => {
+    const hasSearch = Boolean(searchQuery.trim());
     const matchesCategory =
+      hasSearch ||
       selectedCategory === 'All' ||
       video.category.toLowerCase() === selectedCategory.toLowerCase() ||
       video.tags.some((t) => t.toLowerCase() === selectedCategory.toLowerCase()) ||
       (selectedCategory === 'Animation' && video.category === 'Cartoons') ||
       (selectedCategory === 'Cartoons' && video.mediaType === 'cartoon');
 
+    const cleanQ = searchQuery.toLowerCase().trim();
     const matchesSearch =
-      !searchQuery.trim() ||
-      video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      video.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      video.channel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      video.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+      !hasSearch ||
+      video.title.toLowerCase().includes(cleanQ) ||
+      video.description.toLowerCase().includes(cleanQ) ||
+      video.channel.name.toLowerCase().includes(cleanQ) ||
+      video.tags.some((tag) => tag.toLowerCase().includes(cleanQ));
 
     return matchesCategory && matchesSearch;
   });
@@ -139,3 +158,18 @@ export default function HomePage() {
     </div>
   );
 }
+
+export default function HomePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
+        </div>
+      }
+    >
+      <HomeContent />
+    </Suspense>
+  );
+}
+

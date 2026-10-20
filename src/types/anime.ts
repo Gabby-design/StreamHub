@@ -8,6 +8,8 @@ export interface AnimeEpisode {
   dubStreamUrl?: string;
   isHls?: boolean;
   synopsis?: string;
+  resolution?: '1080p' | '720p' | '4K';
+  streamServers?: { name: string; url: string; quality?: string; isEmbed?: boolean }[];
 }
 
 export interface AnimeSeries {
@@ -31,4 +33,5 @@ export interface AnimeSeries {
   hasSub: boolean;
   hasDub: boolean;
   rating?: string;
+  resolution?: '1080p' | '720p' | '4K';
 }

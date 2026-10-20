@@ -88,7 +88,7 @@ export default function BrowsePage() {
                     score: '8.8',
                     episodesCount: v.duration,
                     genres: ['Anime', 'Action', 'Shonen'],
-                    watchUrl: v.id.startsWith('anime-') ? `/series/${v.id.replace('anime-', '')}` : `/watch/${v.id}`,
+                    watchUrl: `/watch/${v.id}`,
                     badge: 'SUB / DUB',
                   }));
                 }
@@ -290,7 +290,7 @@ export default function BrowsePage() {
                   </div>
                 )}
 
-                {/* Type Badge */}
+                {/* Type Badge & Resolution */}
                 <div className="absolute top-2 left-2 flex items-center gap-1">
                   <span
                     className={`rounded px-1.5 py-0.5 text-[9px] font-bold text-white uppercase tracking-wider backdrop-blur-sm ${
@@ -302,6 +302,9 @@ export default function BrowsePage() {
                     }`}
                   >
                     {item.type}
+                  </span>
+                  <span className="rounded bg-black/85 border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400 uppercase tracking-wider backdrop-blur-sm">
+                    1080p
                   </span>
                 </div>
 
@@ -327,9 +330,10 @@ export default function BrowsePage() {
                 <h3 className="line-clamp-2 text-xs font-semibold text-slate-200 group-hover:text-indigo-300 leading-snug">
                   {item.title}
                 </h3>
-                <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
+                <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400">
                   <span>{item.year || '2024'}</span>
-                  <span>{item.episodesCount}</span>
+                  <span className="text-emerald-400 font-semibold text-[10px]">1080p Full HD</span>
+                  <span className="text-slate-500">{item.episodesCount}</span>
                 </div>
               </div>
             </Link>
