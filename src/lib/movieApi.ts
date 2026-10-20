@@ -115,66 +115,117 @@ export function buildStreamServers(
   season = 1,
   episode = 1
 ) {
-  return [
-    {
-      name: 'Server 1 (1080p VidSrc TO)',
+  const rawStr = String(id).replace(/^(movie-|tv-|anime-)/, '');
+  const isPureNumber = /^\d+$/.test(rawStr);
+  const numericId = isPureNumber ? rawStr : undefined;
+  const effectiveImdb = imdbId || (!isPureNumber && rawStr.startsWith('tt') ? rawStr : undefined);
+  const mediaRef = numericId || effectiveImdb || id;
+
+  const servers: Array<{ name: string; url: string; isEmbed: boolean; quality: string }> = [];
+
+  // Server 1: VidLink Pro (Zero sandbox error, clean player with native +10s forward / -10s rewind)
+  if (numericId) {
+    servers.push({
+      name: 'Server 1 (1080p VidLink Pro)',
       url: isTv
-        ? `https://vidsrc.to/embed/tv/${id}/${season}/${episode}`
-        : `https://vidsrc.to/embed/movie/${id}`,
+        ? `https://vidlink.pro/tv/${numericId}/${season}/${episode}?primaryColor=6366f1&title=true&poster=true`
+        : `https://vidlink.pro/movie/${numericId}?primaryColor=6366f1&title=true&poster=true`,
       isEmbed: true,
       quality: '1080p',
-    },
-    {
-      name: 'Server 2 (1080p VidSrc ME)',
+    });
+  }
+
+  // Server 2: AutoEmbed (Clean multi-source failover)
+  if (numericId) {
+    servers.push({
+      name: `Server ${servers.length + 1} (1080p AutoEmbed)`,
       url: isTv
-        ? imdbId
-          ? `https://vidsrc.me/embed/tv?imdb=${imdbId}&season=${season}&episode=${episode}`
-          : `https://vidsrc.me/embed/tv?tmdb=${id}&season=${season}&episode=${episode}`
-        : imdbId
-        ? `https://vidsrc.me/embed/movie?imdb=${imdbId}`
-        : `https://vidsrc.me/embed/movie?tmdb=${id}`,
+        ? `https://autoembed.co/tv/tmdb/${numericId}-${season}-${episode}`
+        : `https://autoembed.co/movie/tmdb/${numericId}`,
       isEmbed: true,
       quality: '1080p',
-    },
-    {
-      name: 'Server 3 (1080p MultiEmbed)',
+    });
+  }
+
+  // Server 3: VidSrc CC v2 (Fast modern CDN)
+  servers.push({
+    name: `Server ${servers.length + 1} (1080p VidSrc CC)`,
+    url: isTv
+      ? (effectiveImdb
+          ? `https://vidsrc.cc/v2/embed/tv/${effectiveImdb}/${season}/${episode}`
+          : `https://vidsrc.cc/v2/embed/tv/${numericId || mediaRef}/${season}/${episode}`)
+      : (effectiveImdb
+          ? `https://vidsrc.cc/v2/embed/movie/${effectiveImdb}`
+          : `https://vidsrc.cc/v2/embed/movie/${numericId || mediaRef}`),
+    isEmbed: true,
+    quality: '1080p',
+  });
+
+  // Server 4: Embed.su (Direct streaming engine)
+  servers.push({
+    name: `Server ${servers.length + 1} (1080p Embed.su)`,
+    url: isTv
+      ? `https://embed.su/embed/tv/${numericId || effectiveImdb || mediaRef}/${season}/${episode}`
+      : `https://embed.su/embed/movie/${numericId || effectiveImdb || mediaRef}`,
+    isEmbed: true,
+    quality: '1080p',
+  });
+
+  // Server 5: MultiEmbed (Supports both IMDb and TMDB)
+  servers.push({
+    name: `Server ${servers.length + 1} (1080p MultiEmbed)`,
+    url: isTv
+      ? `https://multiembed.mov/?video_id=${effectiveImdb || numericId || mediaRef}&s=${season}&e=${episode}&tmdb=1`
+      : `https://multiembed.mov/?video_id=${effectiveImdb || numericId || mediaRef}&tmdb=1`,
+    isEmbed: true,
+    quality: '1080p',
+  });
+
+  // Server 6: VidFast
+  if (numericId) {
+    servers.push({
+      name: `Server ${servers.length + 1} (1080p VidFast)`,
       url: isTv
-        ? `https://multiembed.mov/?video_id=${imdbId || id}&s=${season}&e=${episode}&tmdb=1`
-        : `https://multiembed.mov/?video_id=${imdbId || id}&tmdb=1`,
+        ? `https://vidfast.pro/tv/${numericId}/${season}/${episode}?autoPlay=false&title=true&poster=true&theme=6366f1`
+        : `https://vidfast.pro/movie/${numericId}?autoPlay=false&title=true&poster=true&theme=6366f1`,
       isEmbed: true,
       quality: '1080p',
-    },
-    {
-      name: 'Server 4 (1080p AutoEmbed)',
-      url: isTv
-        ? `https://autoembed.co/tv/tmdb/${id}-${season}-${episode}`
-        : `https://autoembed.co/movie/tmdb/${id}`,
-      isEmbed: true,
-      quality: '1080p',
-    },
-    {
-      name: 'Server 5 (1080p VidFast)',
-      url: isTv
-        ? `https://vidfast.pro/tv/${id}/${season}/${episode}?autoPlay=true&title=true&poster=true&theme=6366f1`
-        : `https://vidfast.pro/movie/${id}?autoPlay=true&title=true&poster=true&theme=6366f1`,
-      isEmbed: true,
-      quality: '1080p',
-    },
-    {
-      name: 'Server 6 (1080p VidSrc PM)',
-      url: isTv
-        ? `https://vidsrc.pm/embed/tv/${id}/${season}/${episode}`
-        : `https://vidsrc.pm/embed/movie/${id}`,
-      isEmbed: true,
-      quality: '1080p',
-    },
-    {
-      name: 'Trailer (HD Preview)',
-      url: `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent((title || 'movie') + ' official trailer')}`,
-      isEmbed: true,
-      quality: 'HD',
-    },
-  ];
+    });
+  }
+
+  // Server 7: VidSrc ME (Mirror)
+  servers.push({
+    name: `Server ${servers.length + 1} (1080p VidSrc ME)`,
+    url: isTv
+      ? effectiveImdb
+        ? `https://vidsrc.me/embed/tv?imdb=${effectiveImdb}&season=${season}&episode=${episode}`
+        : `https://vidsrc.me/embed/tv?tmdb=${numericId || mediaRef}&season=${season}&episode=${episode}`
+      : effectiveImdb
+      ? `https://vidsrc.me/embed/movie?imdb=${effectiveImdb}`
+      : `https://vidsrc.me/embed/movie?tmdb=${numericId || mediaRef}`,
+    isEmbed: true,
+    quality: '1080p',
+  });
+
+  // Server 8: VidSrc TO (Fallback Mirror)
+  servers.push({
+    name: `Server ${servers.length + 1} (1080p VidSrc TO)`,
+    url: isTv
+      ? `https://vidsrc.to/embed/tv/${numericId || mediaRef}/${season}/${episode}`
+      : `https://vidsrc.to/embed/movie/${numericId || mediaRef}`,
+    isEmbed: true,
+    quality: '1080p',
+  });
+
+  // Official Trailer Preview
+  servers.push({
+    name: 'Trailer (HD Preview)',
+    url: `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent((title || 'movie') + ' official trailer')}`,
+    isEmbed: true,
+    quality: 'HD',
+  });
+
+  return servers;
 }
 
 // ============================================================================
@@ -186,7 +237,7 @@ export const CURATED_MOVIES: Video[] = [
     tmdbId: 969681,
     title: 'Spider-Man: Brand New Day',
     description: "Fighting crime full-time as Spider-Man in a world that doesn't remember him sparks a change in Peter Parker he may not have the power to control against a powerful new unseen threat.",
-    videoUrl: 'https://vidsrc.to/embed/movie/969681',
+    videoUrl: 'https://vidlink.pro/movie/969681?primaryColor=6366f1',
     thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/r08LxMJCbf1SiJIWeyH9aJmdqwC.jpg',
     posterUrl: 'https://image.tmdb.org/t/p/w500/bjiS5ipwxb9JFy3XRRN4OAilSeX.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/r08LxMJCbf1SiJIWeyH9aJmdqwC.jpg',
@@ -213,7 +264,7 @@ export const CURATED_MOVIES: Video[] = [
     imdbId: 'tt9362722',
     title: 'Spider-Man: Across the Spider-Verse',
     description: 'Miles Morales catapults across the Multiverse, where he encounters a team of Spider-People charged with protecting its very existence. When the heroes clash on how to handle a new threat, Miles must redefine what it means to be a hero.',
-    videoUrl: 'https://vidsrc.to/embed/movie/569094',
+    videoUrl: 'https://vidlink.pro/movie/569094?primaryColor=6366f1',
     thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/nGxUxi3PfXDRm7Vg95VBNgNM8yc.jpg',
     posterUrl: 'https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/nGxUxi3PfXDRm7Vg95VBNgNM8yc.jpg',
@@ -238,7 +289,7 @@ export const CURATED_MOVIES: Video[] = [
     imdbId: 'tt22022452',
     title: 'Inside Out 2',
     description: 'Joy, Sadness, Anger, Fear and Disgust have been running a successful operation by all accounts. However, when Anxiety, Envy, Ennui and Embarrassment show up, the headquarters undergoes a sudden demolition.',
-    videoUrl: 'https://vidsrc.to/embed/movie/1022789',
+    videoUrl: 'https://vidlink.pro/movie/1022789?primaryColor=6366f1',
     thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/hLuPF9HxtjbS7ZzSjMRG3RpUffp.jpg',
     posterUrl: 'https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/hLuPF9HxtjbS7ZzSjMRG3RpUffp.jpg',
@@ -263,7 +314,7 @@ export const CURATED_MOVIES: Video[] = [
     imdbId: 'tt15239678',
     title: 'Dune: Part Two',
     description: 'Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family. Facing a choice between the love of his life and the fate of the known universe.',
-    videoUrl: 'https://vidsrc.to/embed/movie/693134',
+    videoUrl: 'https://vidlink.pro/movie/693134?primaryColor=6366f1',
     thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/eZ239CUp1d6OryZEBPnO2n87gMG.jpg',
     posterUrl: 'https://image.tmdb.org/t/p/w500/6izwz7rsy95ARzTR3poZ8H6c5pp.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/eZ239CUp1d6OryZEBPnO2n87gMG.jpg',
@@ -288,7 +339,7 @@ export const CURATED_MOVIES: Video[] = [
     imdbId: 'tt6263850',
     title: 'Deadpool & Wolverine',
     description: 'A listless Wade Wilson toils away in civilian life with his days as the morally flexible mercenary Deadpool behind him. But when his homeworld faces an existential threat, Wade must team up with a reluctant Wolverine.',
-    videoUrl: 'https://vidsrc.to/embed/movie/533535',
+    videoUrl: 'https://vidlink.pro/movie/533535?primaryColor=6366f1',
     thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/by8z9Fe8y7p4jo2YlW2SZDnptyT.jpg',
     posterUrl: 'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/by8z9Fe8y7p4jo2YlW2SZDnptyT.jpg',
@@ -313,7 +364,7 @@ export const CURATED_MOVIES: Video[] = [
     imdbId: 'tt4154796',
     title: 'Avengers: Endgame',
     description: 'After the devastating events of Infinity War, the universe is in ruins. With the help of remaining allies, the Avengers assemble once more in order to reverse Thanos actions and restore balance.',
-    videoUrl: 'https://vidsrc.to/embed/movie/299534',
+    videoUrl: 'https://vidlink.pro/movie/299534?primaryColor=6366f1',
     thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg',
     posterUrl: 'https://image.tmdb.org/t/p/w500/bR8ISy1O9XQxqiy0fQFw2BX72RQ.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg',
@@ -518,7 +569,7 @@ export const CURATED_MOVIES: Video[] = [
     tmdbId: 1184918,
     title: 'The Wild Robot',
     description: 'After a shipwreck, an intelligent robot called Roz is stranded on an uninhabited island. To survive the harsh environment, Roz bonds with the island animals and cares for an orphaned baby goose.',
-    videoUrl: 'https://vidsrc.to/embed/movie/1184918',
+    videoUrl: 'https://vidlink.pro/movie/1184918?primaryColor=6366f1',
     thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/mQZJoIhTEkNhCYA00UJIGMdpRIX.jpg',
     posterUrl: 'https://image.tmdb.org/t/p/w500/9w0Vh9eizsqYe5prRUkFsQEC8g9.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/mQZJoIhTEkNhCYA00UJIGMdpRIX.jpg',
@@ -542,7 +593,7 @@ export const CURATED_MOVIES: Video[] = [
     tmdbId: 1241982,
     title: 'Moana 2',
     description: 'After receiving an unexpected call from her wayfinding ancestors, Moana journeys alongside Maui and an all-new crew to the far seas of Oceania into dangerous, long-lost waters for an adventure unlike anything she has ever faced.',
-    videoUrl: 'https://vidsrc.to/embed/movie/1241982',
+    videoUrl: 'https://vidlink.pro/movie/1241982?primaryColor=6366f1',
     thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/tElnmtQ6yszji5P9YQ2z0z2n7u4.jpg',
     posterUrl: 'https://image.tmdb.org/t/p/w500/4YZplWJpHqw0ddCu3kL6j8vB5c8.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/tElnmtQ6yszji5P9YQ2z0z2n7u4.jpg',
@@ -567,7 +618,7 @@ export const CURATED_MOVIES: Video[] = [
     imdbId: 'tt15398776',
     title: 'Oppenheimer',
     description: 'The story of J. Robert Oppenheimer role in the development of the atomic bomb during World War II, exploring the moral and political turmoil of scientific genius.',
-    videoUrl: 'https://vidsrc.to/embed/movie/872585',
+    videoUrl: 'https://vidlink.pro/movie/872585?primaryColor=6366f1',
     thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/fm6KqXpk3M2HVveHwCrBSSBaO0V.jpg',
     posterUrl: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/fm6KqXpk3M2HVveHwCrBSSBaO0V.jpg',
@@ -592,7 +643,7 @@ export const CURATED_MOVIES: Video[] = [
     imdbId: 'tt0816692',
     title: 'Interstellar',
     description: 'The adventures of a group of explorers who make use of a newly discovered wormhole to surpass the limitations on human space travel and conquer the vast distances involved in an interstellar voyage.',
-    videoUrl: 'https://vidsrc.to/embed/movie/157336',
+    videoUrl: 'https://vidlink.pro/movie/157336?primaryColor=6366f1',
     thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/xJHokMbljvjADYdit5fK5VQsXEG.jpg',
     posterUrl: 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/xJHokMbljvjADYdit5fK5VQsXEG.jpg',
@@ -617,7 +668,7 @@ export const CURATED_MOVIES: Video[] = [
     imdbId: 'tt7510222',
     title: 'Despicable Me 4',
     description: 'Gru and Lucy and their girls welcome a new member to the Gru family, Gru Jr., who is intent on tormenting his dad. Gru faces a new nemesis in Maxime Le Mal and his femme fatale girlfriend Valentina.',
-    videoUrl: 'https://vidsrc.to/embed/movie/519182',
+    videoUrl: 'https://vidlink.pro/movie/519182?primaryColor=6366f1',
     thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/fDmci71SMqvAz9LwA2iFpHkM1aI.jpg',
     posterUrl: 'https://image.tmdb.org/t/p/w500/wWba3TaojhK7NdycRhoQpsG0FaH.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/fDmci71SMqvAz9LwA2iFpHkM1aI.jpg',
