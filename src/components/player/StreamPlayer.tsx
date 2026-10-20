@@ -138,6 +138,9 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
         activeSrc.includes('2embed') ||
         activeSrc.includes('vidlink') ||
         activeSrc.includes('vidfast') ||
+        activeSrc.includes('vidrock') ||
+        activeSrc.includes('vidy') ||
+        activeSrc.includes('vidzee') ||
         activeSrc.includes('viduki') ||
         activeSrc.includes('embed.su') ||
         activeSrc.includes('autoembed') ||
@@ -678,7 +681,6 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
               sandbox={isSandboxed ? 'allow-scripts allow-same-origin allow-forms allow-presentation' : undefined}
               allow="accelerometer *; autoplay *; clipboard-write *; encrypted-media *; fullscreen *; gyroscope *; picture-in-picture *; web-share *"
               referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
               className="h-full w-full border-0"
             />
 

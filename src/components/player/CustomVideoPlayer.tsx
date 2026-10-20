@@ -180,6 +180,9 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
         activeSrc.includes('2embed') ||
         activeSrc.includes('vidlink') ||
         activeSrc.includes('vidfast') ||
+        activeSrc.includes('vidrock') ||
+        activeSrc.includes('vidy') ||
+        activeSrc.includes('vidzee') ||
         activeSrc.includes('viduki') ||
         activeSrc.includes('embed.su') ||
         activeSrc.includes('autoembed') ||
@@ -218,13 +221,16 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
       return clean;
     }
 
-    // Streaming server iframe embeds (VidSrc, MultiEmbed, VidLink, VidFast, EmbedSu, etc.)
+    // Streaming server iframe embeds (VidSrc, MultiEmbed, VidLink, VidFast, VidRock, Vidy, VidZee, EmbedSu, etc.)
     if (
       clean.includes('vidsrc') ||
       clean.includes('multiembed') ||
       clean.includes('2embed') ||
       clean.includes('vidlink') ||
       clean.includes('vidfast') ||
+      clean.includes('vidrock') ||
+      clean.includes('vidy') ||
+      clean.includes('vidzee') ||
       clean.includes('viduki') ||
       clean.includes('embed.su') ||
       clean.includes('autoembed')
@@ -833,7 +839,6 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
               sandbox={isSandboxed ? 'allow-scripts allow-same-origin allow-forms allow-presentation' : undefined}
               allow="accelerometer *; autoplay *; clipboard-write *; encrypted-media *; fullscreen *; gyroscope *; picture-in-picture *; web-share *"
               referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
               className="h-full w-full border-0"
             />
 

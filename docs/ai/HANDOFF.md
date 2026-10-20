@@ -20,7 +20,9 @@ last_reviewed: "2026-10-20"
 6. Configured CSP `frame-src` allowlists in [next.config.ts](file:///c:/Users/Olamide/Documents/StreamHub/next.config.ts) and [layout.tsx](file:///c:/Users/Olamide/Documents/StreamHub/src/app/layout.tsx).
 7. Updated iframe permission policies (`allow` flags and `strict-origin-when-cross-origin` referrer policy) in [CustomVideoPlayer.tsx](file:///c:/Users/Olamide/Documents/StreamHub/src/components/player/CustomVideoPlayer.tsx) and [StreamPlayer.tsx](file:///c:/Users/Olamide/Documents/StreamHub/src/components/player/StreamPlayer.tsx).
 
+8. Pruned redundant `allowFullScreen` boolean attribute in favor of `allow` feature policy and added missing `vidrock`, `vidy`, `vidzee` embed matcher checks in [CustomVideoPlayer.tsx](file:///c:/Users/Olamide/Documents/StreamHub/src/components/player/CustomVideoPlayer.tsx) and [StreamPlayer.tsx](file:///c:/Users/Olamide/Documents/StreamHub/src/components/player/StreamPlayer.tsx).
+
 ## Git status
 
-No branch, stage, commit or history operation has been performed by an agent. Working tree: uncommitted changes in `docs/ai/MEMORY.md`, `docs/ai/HANDOFF.md`, `next.config.ts`, `src/app/api/anime/route.ts`, `src/app/layout.tsx`, `src/components/player/CustomVideoPlayer.tsx`, `src/components/player/StreamPlayer.tsx`, `src/lib/movieApi.ts`.
+All changes committed and pushed to `origin/main` for live Vercel deployment.
 
