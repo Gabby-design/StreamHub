@@ -99,16 +99,14 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   }, [getInitialSrc]);
 
   // Shield state: Absorbs first ad-trigger click & neutralizes popups
-  const isVidLinkHost = Boolean(activeSrc?.includes('vidlink.pro'));
   const [absorbClick, setAbsorbClick] = useState(true);
-  const [isSandboxed, setIsSandboxed] = useState(!isVidLinkHost);
-  const [directTouchMode, setDirectTouchMode] = useState(false);
+  const [isSandboxed, setIsSandboxed] = useState(false);
+  const [directTouchMode, setDirectTouchMode] = useState(true);
 
   useEffect(() => {
     setAbsorbClick(true);
-    const isVl = Boolean(activeSrc?.includes('vidlink.pro'));
-    setIsSandboxed(!isVl);
-    setDirectTouchMode(false);
+    setDirectTouchMode(true);
+    setIsSandboxed(false);
   }, [activeSrc]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -833,8 +831,8 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
               title={title || 'Video Player'}
               suppressHydrationWarning={true}
               sandbox={isSandboxed ? 'allow-scripts allow-same-origin allow-forms allow-presentation' : undefined}
-              allow="autoplay; fullscreen; picture-in-picture"
-              referrerPolicy="no-referrer"
+              allow="accelerometer *; autoplay *; clipboard-write *; encrypted-media *; fullscreen *; gyroscope *; picture-in-picture *; web-share *"
+              referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
               className="h-full w-full border-0"
             />

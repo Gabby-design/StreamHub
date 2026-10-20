@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Video } from '@/types';
-import { CURATED_MOVIES } from '@/lib/movieApi';
+import { CURATED_MOVIES, buildStreamServers } from '@/lib/movieApi';
 
 export async function GET(req: NextRequest) {
   try {
@@ -45,22 +45,15 @@ export async function GET(req: NextRequest) {
         const title = attr.canonicalTitle || attr.titles?.en || attr.titles?.en_jp || 'Anime Stream';
         const studio = attr.ageRatingGuide || 'Animation Studio';
 
-        const fullMultiEmbed = `https://multiembed.mov/?video_id=${encodeURIComponent(title)}&s=1&e=1`;
-        const fullVidSrc = `https://vidsrc.to/embed/tv/${item.id}/1/1`;
-        const trailerUrl = ytId
-          ? `https://www.youtube-nocookie.com/embed/${ytId}`
-          : `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(title + ' anime official trailer')}`;
+        const servers = buildStreamServers(title, true, undefined, title, 1, 1);
+        const primaryUrl = servers[0]?.url || (ytId ? `https://www.youtube-nocookie.com/embed/${ytId}` : '');
 
         return {
           id: `anime-${item.id}`,
           title: `${title} (English Sub/Dub)`,
           description: attr.synopsis || 'Official anime stream and broadcast presentation.',
-          videoUrl: fullMultiEmbed,
-          streamServers: [
-            { name: 'Server 1 (1080p MultiEmbed)', url: fullMultiEmbed, isEmbed: true, quality: '1080p' },
-            { name: 'Server 2 (720p VidSrc)', url: fullVidSrc, isEmbed: true, quality: '720p' },
-            { name: 'Trailer (HD Preview)', url: trailerUrl, isEmbed: true, quality: 'HD' },
-          ],
+          videoUrl: primaryUrl,
+          streamServers: servers,
           resolution: '1080p' as const,
           thumbnailUrl: poster || 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1080&auto=format&fit=crop&q=80',
           duration: attr.episodeCount ? `${attr.episodeCount} Ep` : '24:00',

@@ -11,7 +11,7 @@
 
 - Typing into search input must only mutate local `inputVal`; global `searchQuery` is only dispatched on explicit Enter / submit / suggestion selection.
 - All devices initialize with `user = null` displaying a dedicated "Sign In" button instead of any mock profile picture.
-- Streaming embed iframes enforce ad protection via auto-sandbox on non-VidLink hosts (`allow-scripts allow-same-origin allow-forms allow-presentation` to block all top navigations & popups), transparent mobile gesture shield overlay, window.open nullifier on watch routes, window beforeunload guards, CSP frame-src restrictions, and YouTube-style mobile gesture navigation (double tap -10s left / +10s right with visual ripples, hold for 2X speed, floating navigation HUD, and Server Switcher).
+- Streaming embed iframes enforce ad protection via transparent mobile gesture shield overlay, window.open nullifier on watch routes, window beforeunload guards, CSP frame-src restrictions, and YouTube-style mobile gesture navigation (double tap -10s left / +10s right with visual ripples, hold for 2X speed, floating navigation HUD, and Server Switcher). Sandbox attribute is omitted by default so providers (AutoEmbed, VidLink, VidSrc) do not halt with "Playback blocked inside restricted frame".
 - Mandatory Post-Deploy Verification: After pushing live deployment, immediately verify functionality on live Vercel host across mobile and desktop to guarantee zero redirect loops, working playback, and flawless gesture controls.
 
 ## Architecture

@@ -119,14 +119,102 @@ export function buildStreamServers(
   const isPureNumber = /^\d+$/.test(rawStr);
   const numericId = isPureNumber ? rawStr : undefined;
   const effectiveImdb = imdbId || (!isPureNumber && rawStr.startsWith('tt') ? rawStr : undefined);
-  const mediaRef = numericId || effectiveImdb || id;
+  const mediaRef = numericId || effectiveImdb || rawStr || id;
 
   const servers: Array<{ name: string; url: string; isEmbed: boolean; quality: string }> = [];
 
-  // Server 1: AutoEmbed (Universal streaming catalog - instant 1080p playback, sandbox-friendly)
+  // Server 1: VidLink Pro (1Tube Main 4 - Primary engine with custom color, seek & subtitles)
+  if (numericId || effectiveImdb) {
+    const idRef = numericId || effectiveImdb;
+    servers.push({
+      name: 'Server 1 (1080p VidLink Pro)',
+      url: isTv
+        ? `https://vidlink.pro/tv/${idRef}/${season}/${episode}?primaryColor=6366f1&secondaryColor=a2a2a2&iconColor=eefdec&icons=default&player=jw&title=true&poster=true`
+        : `https://vidlink.pro/movie/${idRef}?primaryColor=6366f1&secondaryColor=a2a2a2&iconColor=eefdec&icons=default&player=jw&title=true&poster=true`,
+      isEmbed: true,
+      quality: '1080p',
+    });
+  }
+
+  // Server 2: Viduki Main 1 (1Tube Default Primary Stream)
   if (numericId) {
     servers.push({
-      name: 'Server 1 (1080p AutoEmbed)',
+      name: `Server ${servers.length + 1} (1080p Viduki Main 1)`,
+      url: isTv
+        ? `https://www.viduki.net/1/tv/${numericId}/${season}/${episode}?color=6366f1`
+        : `https://www.viduki.net/1/movie/${numericId}?color=6366f1`,
+      isEmbed: true,
+      quality: '1080p',
+    });
+  }
+
+  // Server 3: VidFast (1Tube Main 3 - High-speed mirror)
+  if (numericId || effectiveImdb) {
+    const idRef = numericId || effectiveImdb;
+    servers.push({
+      name: `Server ${servers.length + 1} (1080p VidFast)`,
+      url: isTv
+        ? `https://vidfast.pro/tv/${idRef}/${season}/${episode}?autoPlay=false&title=true&poster=true&theme=6366f1&nextButton=false&autoNext=false`
+        : `https://vidfast.pro/movie/${idRef}?autoPlay=false&title=true&poster=true&theme=6366f1`,
+      isEmbed: true,
+      quality: '1080p',
+    });
+  }
+
+  // Server 4: VidRock (1Tube Main 5 - Ultra HD buffer)
+  if (numericId || effectiveImdb) {
+    const idRef = numericId || effectiveImdb;
+    servers.push({
+      name: `Server ${servers.length + 1} (1080p VidRock)`,
+      url: isTv
+        ? `https://vidrock.to/tv/${idRef}/${season}/${episode}?theme=6366f1&autoplay=false&download=false`
+        : `https://vidrock.to/movie/${idRef}?theme=6366f1&autoplay=false&download=false`,
+      isEmbed: true,
+      quality: '1080p',
+    });
+  }
+
+  // Server 5: Vidy (1Tube Main 2 - Fast overlay player)
+  if (numericId || effectiveImdb) {
+    const idRef = numericId || effectiveImdb;
+    servers.push({
+      name: `Server ${servers.length + 1} (1080p Vidy)`,
+      url: isTv
+        ? `https://vidy.st/tv/${idRef}/${season}/${episode}?color=6366f1&episodeSelector=false&nextEpisode=false&autoplayNextEpisode=false&overlay=true`
+        : `https://vidy.st/movie/${idRef}?color=6366f1&overlay=true`,
+      isEmbed: true,
+      quality: '1080p',
+    });
+  }
+
+  // Server 6: Viduki Multi-Language (1Tube Multi-Language Audio)
+  if (numericId) {
+    servers.push({
+      name: `Server ${servers.length + 1} (1080p Multi-Language)`,
+      url: isTv
+        ? `https://www.viduki.net/2/tv/${numericId}/${season}/${episode}?color=6366f1`
+        : `https://www.viduki.net/2/movie/${numericId}?color=6366f1`,
+      isEmbed: true,
+      quality: '1080p',
+    });
+  }
+
+  // Server 7: Viduki Premium Embeds (1Tube Premium)
+  if (numericId) {
+    servers.push({
+      name: `Server ${servers.length + 1} (1080p Viduki Premium)`,
+      url: isTv
+        ? `https://www.viduki.net/4/tv/${numericId}/${season}/${episode}?color=6366f1`
+        : `https://www.viduki.net/4/movie/${numericId}?color=6366f1`,
+      isEmbed: true,
+      quality: '1080p',
+    });
+  }
+
+  // Server 8: AutoEmbed (Universal TMDB catalog fallback)
+  if (numericId) {
+    servers.push({
+      name: `Server ${servers.length + 1} (1080p AutoEmbed)`,
       url: isTv
         ? `https://autoembed.co/tv/tmdb/${numericId}-${season}-${episode}`
         : `https://autoembed.co/movie/tmdb/${numericId}`,
@@ -135,81 +223,20 @@ export function buildStreamServers(
     });
   }
 
-  // Server 2: VidSrc CC v2 (Fast modern CDN)
-  servers.push({
-    name: `Server ${servers.length + 1} (1080p VidSrc CC)`,
-    url: isTv
-      ? (effectiveImdb
-          ? `https://vidsrc.cc/v2/embed/tv/${effectiveImdb}/${season}/${episode}`
-          : `https://vidsrc.cc/v2/embed/tv/${numericId || mediaRef}/${season}/${episode}`)
-      : (effectiveImdb
-          ? `https://vidsrc.cc/v2/embed/movie/${effectiveImdb}`
-          : `https://vidsrc.cc/v2/embed/movie/${numericId || mediaRef}`),
-    isEmbed: true,
-    quality: '1080p',
-  });
-
-  // Server 3: Embed.su (Direct streaming engine)
-  servers.push({
-    name: `Server ${servers.length + 1} (1080p Embed.su)`,
-    url: isTv
-      ? `https://embed.su/embed/tv/${numericId || effectiveImdb || mediaRef}/${season}/${episode}`
-      : `https://embed.su/embed/movie/${numericId || effectiveImdb || mediaRef}`,
-    isEmbed: true,
-    quality: '1080p',
-  });
-
-  // Server 4: MultiEmbed (Supports both IMDb and TMDB)
-  servers.push({
-    name: `Server ${servers.length + 1} (1080p MultiEmbed)`,
-    url: isTv
-      ? `https://multiembed.mov/?video_id=${effectiveImdb || numericId || mediaRef}&s=${season}&e=${episode}&tmdb=1`
-      : `https://multiembed.mov/?video_id=${effectiveImdb || numericId || mediaRef}&tmdb=1`,
-    isEmbed: true,
-    quality: '1080p',
-  });
-
-  // Server 5: VidFast
-  if (numericId) {
+  // Server 9: VidZee (1Tube Main 6)
+  if (numericId || effectiveImdb) {
+    const idRef = numericId || effectiveImdb;
     servers.push({
-      name: `Server ${servers.length + 1} (1080p VidFast)`,
+      name: `Server ${servers.length + 1} (1080p VidZee)`,
       url: isTv
-        ? `https://vidfast.pro/tv/${numericId}/${season}/${episode}?autoPlay=false&title=true&poster=true&theme=6366f1`
-        : `https://vidfast.pro/movie/${numericId}?autoPlay=false&title=true&poster=true&theme=6366f1`,
+        ? `https://player.vidzee.wtf/embed/tv/${idRef}/${season}/${episode}?color=6366f1`
+        : `https://player.vidzee.wtf/embed/movie/${idRef}?color=6366f1`,
       isEmbed: true,
       quality: '1080p',
     });
   }
 
-  // Server 6: VidLink Pro (Fast 1080p mirror with seek controls)
-  if (numericId) {
-    servers.push({
-      name: `Server ${servers.length + 1} (1080p VidLink Pro)`,
-      url: isTv
-        ? `https://vidlink.pro/tv/${numericId}/${season}/${episode}?primaryColor=6366f1&title=true&poster=true`
-        : `https://vidlink.pro/movie/${numericId}?primaryColor=6366f1&title=true&poster=true`,
-      isEmbed: true,
-      quality: '1080p',
-    });
-  }
-
-
-
-  // Server 7: VidSrc ME (Mirror)
-  servers.push({
-    name: `Server ${servers.length + 1} (1080p VidSrc ME)`,
-    url: isTv
-      ? effectiveImdb
-        ? `https://vidsrc.me/embed/tv?imdb=${effectiveImdb}&season=${season}&episode=${episode}`
-        : `https://vidsrc.me/embed/tv?tmdb=${numericId || mediaRef}&season=${season}&episode=${episode}`
-      : effectiveImdb
-      ? `https://vidsrc.me/embed/movie?imdb=${effectiveImdb}`
-      : `https://vidsrc.me/embed/movie?tmdb=${numericId || mediaRef}`,
-    isEmbed: true,
-    quality: '1080p',
-  });
-
-  // Server 8: VidSrc TO (Fallback Mirror)
+  // Server 10: VidSrc TO (Reliable fallback mirror)
   servers.push({
     name: `Server ${servers.length + 1} (1080p VidSrc TO)`,
     url: isTv
