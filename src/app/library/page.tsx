@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useApp } from '@/context/AppContext';
+import { useApp, isOwnerUser } from '@/context/AppContext';
 import { VideoCard } from '@/components/feed/VideoCard';
 import Link from 'next/link';
 import {
@@ -11,6 +11,8 @@ import {
   Clock,
   ArrowRight,
   User,
+  Film,
+  UploadCloud,
 } from 'lucide-react';
 
 export default function LibraryPage() {
@@ -21,6 +23,13 @@ export default function LibraryPage() {
     setMounted(true);
   }, []);
 
+  const isOwner = isOwnerUser(user);
+  const uploadedVideos = videos.filter(
+    (v) =>
+      v.id.startsWith('upload_') ||
+      (user && (v.channel.id === 'ch_' + user.id || v.channel.handle === user.handle)) ||
+      (isOwner && (v.channel.handle === 'G@bby' || v.channel.id === 'ch_usr_owner_gabriel'))
+  );
   const likedVideos = videos.filter((v) => likedVideoIds.includes(v.id));
   const savedVideos = videos.filter((v) => savedVideoIds.includes(v.id));
 
@@ -44,6 +53,8 @@ export default function LibraryPage() {
             <h1 className="text-xl font-bold text-white">{mounted && user ? user.name : 'Guest Creator'}</h1>
             <p className="text-xs text-slate-400 font-mono">{mounted && user ? user.handle : '@guest'}</p>
             <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
+              <span>{uploadedVideos.length} Uploaded</span>
+              <span>•</span>
               <span>{watchHistory.length} History</span>
               <span>•</span>
               <span>{likedVideos.length} Liked</span>
@@ -59,6 +70,47 @@ export default function LibraryPage() {
         >
           Studio Upload
         </Link>
+      </div>
+
+      {/* Uploaded Movies & Streams Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Film className="h-4 w-4 text-purple-400" />
+            <h2 className="text-lg font-bold text-white">Your Uploaded Movies & Streams</h2>
+            <span className="rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-bold px-2 py-0.5">
+              {uploadedVideos.length}
+            </span>
+          </div>
+          <Link
+            href="/upload"
+            className="flex items-center gap-1.5 text-xs font-semibold text-purple-400 hover:text-purple-300 transition"
+          >
+            <UploadCloud className="h-3.5 w-3.5" />
+            <span>Upload New</span>
+          </Link>
+        </div>
+
+        {uploadedVideos.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {uploadedVideos.map((video) => (
+              <VideoCard key={video.id} video={video} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center bg-[#11131a]/40">
+            <p className="text-xs text-slate-400 mb-3">
+              You haven&apos;t uploaded any movies or video streams yet.
+            </p>
+            <Link
+              href="/upload"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 px-4 py-2 text-xs font-semibold text-purple-200 transition"
+            >
+              <UploadCloud className="h-3.5 w-3.5" />
+              <span>Upload Movie to Server</span>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* History Section */}

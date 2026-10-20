@@ -61,3 +61,36 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  let id = searchParams.get('id');
+
+  if (!id) {
+    try {
+      const body = await request.json();
+      id = body?.id;
+    } catch {}
+  }
+
+  if (!id) {
+    return NextResponse.json({ success: false, error: 'Movie ID required' }, { status: 400 });
+  }
+
+  try {
+    const { supabase, isSupabaseConfigured } = await import('@/lib/supabase');
+    if (isSupabaseConfigured() && supabase) {
+      await supabase.from('videos').delete().eq('id', id);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Movie deleted successfully from server',
+      id,
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to delete movie from server' },
+      { status: 500 }
+    );
+  }
+}

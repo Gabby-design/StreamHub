@@ -79,3 +79,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  let id = searchParams.get('id');
+
+  if (!id) {
+    try {
+      const body = await req.json();
+      id = body?.id;
+    } catch {}
+  }
+
+  if (!id) {
+    return NextResponse.json({ success: false, error: 'Asset ID required' }, { status: 400 });
+  }
+
+  try {
+    const { supabase, isSupabaseConfigured } = await import('@/lib/supabase');
+    if (isSupabaseConfigured() && supabase) {
+      await supabase.from('videos').delete().eq('id', id);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Uploaded movie asset deleted from server',
+      id,
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to remove asset' },
+      { status: 500 }
+    );
+  }
+}

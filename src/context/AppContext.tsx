@@ -17,6 +17,7 @@ interface AppContextType {
   videos: Video[];
   addUploadedVideo: (video: Video) => void;
   addDiscoveredVideos: (newVideos: Video[]) => void;
+  deleteVideo: (videoId: string) => Promise<boolean>;
 
   // History & Library
   watchHistory: Video[];
@@ -69,6 +70,28 @@ export const OWNER_USER: UserProfile = {
   handle: 'G@bby',
 };
 
+export const isOwnerUser = (user: UserProfile | null): boolean => {
+  if (!user) return false;
+  return (
+    user.id === 'usr_owner_gabriel' ||
+    user.handle === 'G@bby' ||
+    user.name.toLowerCase().includes('gabriel') ||
+    user.email.toLowerCase().includes('gabriel')
+  );
+};
+
+export const canDeleteVideo = (video: Video, user: UserProfile | null): boolean => {
+  if (!user) return false;
+  // Master owner can delete any uploaded movie/video or server asset
+  if (isOwnerUser(user)) return true;
+  // Regular creator can delete their uploaded movies
+  return (
+    video.channel.id === 'ch_' + user.id ||
+    video.channel.handle === user.handle ||
+    video.id.startsWith('upload_')
+  );
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Any device starts logged out (null) so a Sign In button is shown
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -109,10 +132,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const storedSubs = localStorage.getItem('streamhub_subs');
       if (storedSubs) setSubscribedChannelIds(JSON.parse(storedSubs));
 
+      const storedDeleted = localStorage.getItem('streamhub_deleted_video_ids');
+      const deletedIds: string[] = storedDeleted ? JSON.parse(storedDeleted) : [];
+
       const storedUploads = localStorage.getItem('streamhub_custom_videos');
       if (storedUploads) {
         const customVids: Video[] = JSON.parse(storedUploads);
-        setVideos((prev) => [...customVids, ...prev]);
+        setVideos((prev) => {
+          const combined = [...customVids, ...prev];
+          const unique = Array.from(new Map(combined.map((v) => [v.id, v])).values());
+          return unique.filter((v) => !deletedIds.includes(v.id));
+        });
+      } else if (deletedIds.length > 0) {
+        setVideos((prev) => prev.filter((v) => !deletedIds.includes(v.id)));
       }
     } catch {
       // Local storage unparsed or disabled
@@ -169,11 +201,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {}
   }, []);
 
+  const deleteVideo = useCallback(async (videoId: string): Promise<boolean> => {
+    // 1. Remove from in-memory state immediately
+    setVideos((prev) => prev.filter((v) => v.id !== videoId));
+
+    try {
+      // 2. Remove from custom uploads stored in localStorage
+      const storedUploads = localStorage.getItem('streamhub_custom_videos');
+      if (storedUploads) {
+        const existing: Video[] = JSON.parse(storedUploads);
+        const filtered = existing.filter((v) => v.id !== videoId);
+        localStorage.setItem('streamhub_custom_videos', JSON.stringify(filtered));
+      }
+
+      // 3. Persist ID in streamhub_deleted_video_ids so it stays removed across reloads
+      const storedDeleted = localStorage.getItem('streamhub_deleted_video_ids');
+      const deletedIds: string[] = storedDeleted ? JSON.parse(storedDeleted) : [];
+      if (!deletedIds.includes(videoId)) {
+        localStorage.setItem('streamhub_deleted_video_ids', JSON.stringify([...deletedIds, videoId]));
+      }
+
+      // 4. Remove from user watch history
+      setWatchHistory((prev) => {
+        const updated = prev.filter((v) => v.id !== videoId);
+        try {
+          localStorage.setItem('streamhub_history', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      // 5. Remove from liked & saved lists
+      setLikedVideoIds((prev) => {
+        const updated = prev.filter((id) => id !== videoId);
+        try {
+          localStorage.setItem('streamhub_likes', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      setSavedVideoIds((prev) => {
+        const updated = prev.filter((id) => id !== videoId);
+        try {
+          localStorage.setItem('streamhub_saved', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      // 6. Remove from queue
+      setQueue((prev) => prev.filter((v) => v.id !== videoId));
+
+      // 7. Request deletion on server endpoints and Supabase
+      await Promise.allSettled([
+        fetch(`/api/movies?id=${encodeURIComponent(videoId)}`, { method: 'DELETE' }),
+        fetch(`/api/upload?id=${encodeURIComponent(videoId)}`, { method: 'DELETE' }),
+      ]);
+    } catch (err) {
+      console.error('Error during video deletion:', err);
+    }
+    return true;
+  }, []);
+
   const addDiscoveredVideos = useCallback((newVideos: Video[]) => {
     if (!newVideos || newVideos.length === 0) return;
+    let deletedIds: string[] = [];
+    try {
+      const storedDeleted = localStorage.getItem('streamhub_deleted_video_ids');
+      if (storedDeleted) deletedIds = JSON.parse(storedDeleted);
+    } catch {}
+
     setVideos((prev) => {
       const existingIds = new Set(prev.map((v) => v.id));
-      const novel = newVideos.filter((v) => !existingIds.has(v.id));
+      const novel = newVideos.filter((v) => !existingIds.has(v.id) && !deletedIds.includes(v.id));
       if (novel.length === 0) return prev;
       return [...prev, ...novel];
     });
@@ -340,6 +438,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         videos,
         addUploadedVideo,
         addDiscoveredVideos,
+        deleteVideo,
         watchHistory,
         addToHistory,
         clearHistory,

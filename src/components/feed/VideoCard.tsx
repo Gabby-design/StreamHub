@@ -11,19 +11,26 @@ import {
   ListPlus,
   Share2,
   Check,
+  Trash2,
 } from 'lucide-react';
 import { formatDuration } from '@/lib/utils';
+import { canDeleteVideo, isOwnerUser } from '@/context/AppContext';
+import { DeleteConfirmModal } from '@/components/common/DeleteConfirmModal';
 
 interface VideoCardProps {
   video: Video;
 }
 
 export const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
-  const { toggleWatchLater, savedVideoIds, addToQueue } = useApp();
+  const { toggleWatchLater, savedVideoIds, addToQueue, user, deleteVideo } = useApp();
   const [isHovered, setIsHovered] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  const canDelete = canDeleteVideo(video, user);
+  const isOwner = isOwnerUser(user);
 
   const isSaved = savedVideoIds.includes(video.id);
 
@@ -235,10 +242,39 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
                   </>
                 )}
               </button>
+
+              {canDelete && (
+                <>
+                  <div className="my-1 border-t border-white/10" />
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowMenu(false);
+                      setShowDeleteModal(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-rose-400 hover:bg-rose-500/15 rounded-lg transition"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+                    Delete Movie
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={async () => {
+          await deleteVideo(video.id);
+        }}
+        videoTitle={video.title}
+        thumbnailUrl={video.thumbnailUrl}
+        isOwner={isOwner}
+      />
     </div>
   );
 };

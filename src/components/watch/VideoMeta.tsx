@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Video } from '@/types';
-import { useApp } from '@/context/AppContext';
+import { useApp, canDeleteVideo, isOwnerUser } from '@/context/AppContext';
 import {
   ThumbsUp,
   ThumbsDown,
@@ -14,14 +15,17 @@ import {
   Check,
   X,
   Copy,
+  Trash2,
 } from 'lucide-react';
 import { formatDuration, formatDurationText } from '@/lib/utils';
+import { DeleteConfirmModal } from '@/components/common/DeleteConfirmModal';
 
 interface VideoMetaProps {
   video: Video;
 }
 
 export const VideoMeta: React.FC<VideoMetaProps> = ({ video }) => {
+  const router = useRouter();
   const {
     likedVideoIds,
     dislikedVideoIds,
@@ -31,12 +35,18 @@ export const VideoMeta: React.FC<VideoMetaProps> = ({ video }) => {
     toggleWatchLater,
     subscribedChannelIds,
     toggleSubscribe,
+    deleteVideo,
+    user,
   } = useApp();
 
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [downloadStarted, setDownloadStarted] = useState(false);
+
+  const canDelete = canDeleteVideo(video, user);
+  const isOwner = isOwnerUser(user);
 
   const isLiked = likedVideoIds.includes(video.id);
   const isDisliked = dislikedVideoIds.includes(video.id);
@@ -271,6 +281,18 @@ export const VideoMeta: React.FC<VideoMetaProps> = ({ video }) => {
             <Bookmark className={`h-3.5 w-3.5 ${isSaved ? 'fill-current' : ''}`} />
             <span>{isSaved ? 'Saved' : 'Save'}</span>
           </button>
+
+          {/* Delete Button (Owner / Uploader) */}
+          {canDelete && (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="flex items-center gap-1.5 rounded-full bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 px-3.5 py-2 text-xs font-semibold text-rose-400 hover:text-rose-300 transition"
+              title="Delete this movie from server"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>Delete</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -335,6 +357,18 @@ export const VideoMeta: React.FC<VideoMetaProps> = ({ video }) => {
           </div>
         </div>
       )}
+
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={async () => {
+          await deleteVideo(video.id);
+          router.push('/library');
+        }}
+        videoTitle={video.title}
+        thumbnailUrl={video.thumbnailUrl}
+        isOwner={isOwner}
+      />
     </div>
   );
 };

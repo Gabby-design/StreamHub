@@ -32,7 +32,8 @@ export default function UploadPage() {
   // Form Metadata
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('Tech');
+  const [customVideoUrl, setCustomVideoUrl] = useState('');
+  const [category, setCategory] = useState('Movies');
   const [visibility, setVisibility] = useState<'Public' | 'Unlisted' | 'Private'>('Public');
   const [currentTag, setCurrentTag] = useState('');
   const [tags, setTags] = useState<string[]>(['StreamHub', 'Original']);
@@ -119,40 +120,67 @@ export default function UploadPage() {
     if (!title.trim()) return;
 
     const newVideoId = 'upload_' + Date.now();
+    let finalVideoUrl = customVideoUrl.trim();
+    if (!finalVideoUrl && selectedFile) {
+      try {
+        finalVideoUrl = URL.createObjectURL(selectedFile);
+      } catch {}
+    }
+    if (!finalVideoUrl) {
+      finalVideoUrl = 'https://cdn.plyr.io/static/demo/View_From_A_Blue_Moon_Trailer-576p.mp4';
+    }
+
+    const isHls = finalVideoUrl.includes('.m3u8');
+    const mediaType =
+      category === 'Movies'
+        ? 'movie'
+        : category === 'Anime'
+        ? 'anime'
+        : category === 'Cartoons'
+        ? 'cartoon'
+        : 'video';
+
+    const isOwner = Boolean(
+      user?.id === 'usr_owner_gabriel' ||
+      user?.handle === 'G@bby' ||
+      user?.name?.toLowerCase().includes('gabriel')
+    );
+
     const createdVideo: Video = {
       id: newVideoId,
       title: title.trim(),
       description: description.trim() || 'No description provided.',
-      videoUrl: 'https://cdn.plyr.io/static/demo/View_From_A_Blue_Moon_Trailer-576p.mp4',
+      videoUrl: finalVideoUrl,
       thumbnailUrl,
-      duration: '03:45',
-      durationSec: 225,
+      duration: '01:48:32',
+      durationSec: 6512,
       views: 1,
       createdAt: 'Just now',
+      mediaType,
+      isHls,
       channel: user
         ? {
             id: 'ch_' + user.id,
             name: user.name,
             handle: user.handle,
             avatarUrl: user.avatarUrl,
-            subscribers: '1',
-            subscriberCount: 1,
-            isVerified: false,
+            subscribers: isOwner ? '1.2K' : '1',
+            subscriberCount: isOwner ? 1200 : 1,
+            isVerified: isOwner,
           }
         : {
-            id: 'ch_anon',
-            name: 'Creator Studio',
-            handle: '@creator',
-            avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-            subscribers: '1',
-            subscriberCount: 1,
-            isVerified: false,
+            id: 'ch_usr_owner_gabriel',
+            name: 'Gabriel Tolulope',
+            handle: 'G@bby',
+            avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+            subscribers: '1.2K',
+            subscriberCount: 1200,
+            isVerified: true,
           },
       likes: 1,
       dislikes: 0,
       category,
       tags,
-      isHls: false,
     };
 
     addUploadedVideo(createdVideo);
@@ -307,6 +335,24 @@ export default function UploadPage() {
                 placeholder="Provide viewers with a summary, timestamps, credits, and links..."
                 className="w-full rounded-xl bg-black/40 border border-white/10 p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition resize-none"
               />
+            </div>
+
+            {/* Direct Video / Stream URL (Optional) */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider flex items-center justify-between">
+                <span>Video Stream URL / Direct MP4 / HLS (Optional)</span>
+                <span className="text-[10px] text-slate-500 lowercase">https://...</span>
+              </label>
+              <input
+                type="url"
+                value={customVideoUrl}
+                onChange={(e) => setCustomVideoUrl(e.target.value)}
+                placeholder="https://example.com/movie.mp4 or HLS m3u8 stream (or use uploaded file)"
+                className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                You can paste a direct video stream link, or leave blank to play your uploaded file.
+              </p>
             </div>
 
             {/* Thumbnail Selection */}
