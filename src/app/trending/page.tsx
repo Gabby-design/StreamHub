@@ -3,7 +3,7 @@
 import React from 'react';
 import { useApp } from '@/context/AppContext';
 import { VideoGrid } from '@/components/feed/VideoGrid';
-import { Flame, Compass } from 'lucide-react';
+import { Flame } from 'lucide-react';
 
 export default function TrendingPage() {
   const { videos } = useApp();

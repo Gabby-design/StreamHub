@@ -195,7 +195,7 @@ export default function ChannelPage() {
               <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
               <select
                 value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as any)}
+                onChange={(e) => setSortOrder(e.target.value as 'latest' | 'popular' | 'oldest')}
                 className="bg-transparent text-xs text-slate-300 focus:outline-none cursor-pointer"
               >
                 <option value="latest" className="bg-[#11131a] text-white">Latest</option>

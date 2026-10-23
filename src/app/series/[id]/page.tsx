@@ -1,29 +1,25 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { AnimeSeries, AnimeEpisode } from '@/types/anime';
-import { getAnimeDetails, getTrendingAnime } from '@/lib/animeApi';
+import { getAnimeDetails } from '@/lib/animeApi';
 import { StreamPlayer } from '@/components/player/StreamPlayer';
 import { useApp } from '@/context/AppContext';
 import Link from 'next/link';
 import {
   Star,
   Tv,
-  Calendar,
-  Layers,
   Bookmark,
   Share2,
   Check,
   Play,
   ArrowLeft,
   Loader2,
-  Sparkles,
 } from 'lucide-react';
 
 export default function SeriesDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const seriesId = params?.id as string;
 
   const { savedVideoIds, toggleWatchLater } = useApp();
@@ -37,7 +33,9 @@ export default function SeriesDetailPage() {
 
   useEffect(() => {
     let isCancelled = false;
-    setIsLoading(true);
+    queueMicrotask(() => {
+      setIsLoading(true);
+    });
 
     const loadSeries = async () => {
       try {

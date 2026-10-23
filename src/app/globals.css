@@ -1,48 +1,48 @@
 @import "tailwindcss";
 
 :root {
-  --background: #090a0f;
-  --foreground: #f1f5f9;
-  --card-bg: #11131a;
-  --card-border: #1e2230;
-  --accent-primary: #6366f1;
-  --accent-secondary: #ec4899;
-  --accent-hover: #4f46e5;
-  --muted-text: #94a3b8;
+  --background: #0b0b0c;
+  --foreground: #f4f4f6;
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --card-border: rgba(255, 255, 255, 0.1);
+  --accent-primary: #E50914;
+  --accent-secondary: #FF1E44;
+  --accent-hover: #b80710;
+  --muted-text: #a1a1aa;
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: #0b0b0c;
+  color: #f4f4f6;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
 }
 
-/* Custom modern scrollbar */
+/* Custom sleek dark scrollbar with crimson hover */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #090a0f;
+  background: #0b0b0c;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e2230;
+  background: #27272a;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #E50914;
 }
 
-/* Slider custom styling for custom video player */
+/* Slider custom styling */
 input[type="range"] {
-  accent-color: #6366f1;
+  accent-color: #E50914;
 }
 
-/* Hide scrollbar for category pills while maintaining scrollability */
+/* Hide scrollbar utility */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -51,18 +51,31 @@ input[type="range"] {
   scrollbar-width: none;
 }
 
-/* Glassmorphism helpers */
+/* Glassmorphism surfaces matching reference */
 .glass-panel {
-  background: rgba(17, 19, 26, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.glass-dropdown {
-  background: rgba(15, 18, 25, 0.95);
+  background: rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+
+.glass-dropdown {
+  background: rgba(18, 18, 22, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+}
+
+/* Glowing Crimson Effects */
+.glow-crimson {
+  box-shadow: 0 0 25px rgba(229, 9, 20, 0.5);
+}
+
+.glow-crimson-subtle {
+  box-shadow: 0 0 15px rgba(229, 9, 20, 0.3);
+}
+
+.glow-crimson-aura {
+  background: radial-gradient(circle, rgba(229, 9, 20, 0.45) 0%, rgba(255, 30, 68, 0.18) 45%, transparent 70%);
 }

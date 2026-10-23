@@ -23,7 +23,7 @@ export default function WatchPage() {
   const [isResolving, setIsResolving] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [activeEpisode, setActiveEpisode] = useState(1);
-  const [seasonEpisodes, setSeasonEpisodes] = useState<any[]>([]);
+  const [seasonEpisodes, setSeasonEpisodes] = useState<NonNullable<Video['episodes']>[number][]>([]);
   const [isLoadingEpisodes, setIsLoadingEpisodes] = useState(false);
 
   const localVideo = videos.find((v) => v.id === videoId);
@@ -52,41 +52,47 @@ export default function WatchPage() {
 
   // Sync initial episodes from video object
   useEffect(() => {
-    if (!isTvShow) {
-      setSeasonEpisodes([]);
-      return;
-    }
-    if (video?.episodes && video.episodes.length > 0) {
-      setSeasonEpisodes(video.episodes);
-    } else if (video && (video.numberOfEpisodes || video.numberOfSeasons)) {
-      const epCount = video.numberOfEpisodes || 24;
-      const count = Math.min(epCount, 100);
-      setSeasonEpisodes(
-        Array.from({ length: count }, (_, i) => ({
-          id: `${video.id}-s1-e${i + 1}`,
-          episodeNumber: i + 1,
-          seasonNumber: 1,
-          title: `Episode ${i + 1}`,
-          overview: `Official 1080p high-definition stream for episode ${i + 1} with English Dub and Sub.`,
-          stillUrl: video.thumbnailUrl,
-          runtime: 24,
-        }))
-      );
-    } else {
-      setSeasonEpisodes([]);
-    }
+    queueMicrotask(() => {
+      if (!isTvShow) {
+        setSeasonEpisodes([]);
+        return;
+      }
+      if (video?.episodes && video.episodes.length > 0) {
+        setSeasonEpisodes(video.episodes);
+      } else if (video && (video.numberOfEpisodes || video.numberOfSeasons)) {
+        const epCount = video.numberOfEpisodes || 24;
+        const count = Math.min(epCount, 100);
+        setSeasonEpisodes(
+          Array.from({ length: count }, (_, i) => ({
+            id: `${video.id}-s1-e${i + 1}`,
+            episodeNumber: i + 1,
+            seasonNumber: 1,
+            title: `Episode ${i + 1}`,
+            overview: `Official 1080p high-definition stream for episode ${i + 1} with English Dub and Sub.`,
+            stillUrl: video.thumbnailUrl,
+            runtime: 24,
+          }))
+        );
+      } else {
+        setSeasonEpisodes([]);
+      }
+    });
   }, [video?.episodes, video, isTvShow]);
 
   // Fetch episodes on season switch
   useEffect(() => {
     if (!isTvShow || !video || !video.numberOfSeasons) return;
     if (selectedSeason === 1 && video.episodes && video.episodes.length > 0) {
-      setSeasonEpisodes(video.episodes);
+      queueMicrotask(() => {
+        setSeasonEpisodes(video.episodes!);
+      });
       return;
     }
 
     let isCancelled = false;
-    setIsLoadingEpisodes(true);
+    queueMicrotask(() => {
+      setIsLoadingEpisodes(true);
+    });
     fetch(`/api/movies?id=${encodeURIComponent(video.tmdbId || video.id)}&season=${selectedSeason}`)
       .then((r) => r.json())
       .then((data) => {
@@ -132,7 +138,7 @@ export default function WatchPage() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedSeason, video]);
+  }, [selectedSeason, video, isTvShow]);
 
   // Fallback resolver for direct URLs to dynamic movies/anime
   useEffect(() => {
@@ -140,7 +146,9 @@ export default function WatchPage() {
 
     let isCancelled = false;
     const resolveVideo = async () => {
-      setIsResolving(true);
+      queueMicrotask(() => {
+        setIsResolving(true);
+      });
       try {
         // 1. Try direct exact ID lookup first (supports movie-tmdb-*, tv-tmdb-*, anime-tmdb-*, movie-tt*, tt*, and numeric TMDB IDs)
         if (
@@ -228,7 +236,7 @@ export default function WatchPage() {
       loggedHistoryRef.current = video.id;
       addToHistory(video);
     }
-  }, [video?.id, addToHistory]);
+  }, [video, addToHistory]);
 
   // Window beforeunload guard against third-party ad script navigations
   useEffect(() => {
@@ -255,6 +263,30 @@ export default function WatchPage() {
     }
   }, [autoplay, videos, videoId, router]);
 
+  const [selectedLanguage, setSelectedLanguage] = React.useState<string>('en');
+
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem('streamhub_playback_lang');
+      if (saved) {
+        queueMicrotask(() => {
+          setSelectedLanguage(saved);
+        });
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleLanguageChange = React.useCallback((newLang: string) => {
+    setSelectedLanguage(newLang);
+    try {
+      localStorage.setItem('streamhub_playback_lang', newLang);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const currentStreamServers = React.useMemo(() => {
     if (!video) return undefined;
     if (isTvShow && (video.tmdbId || video.id)) {
@@ -264,14 +296,20 @@ export default function WatchPage() {
         video.imdbId,
         video.title,
         selectedSeason,
-        activeEpisode
+        activeEpisode,
+        selectedLanguage
       );
     }
-    return (
-      video.streamServers ||
-      buildStreamServers(video.tmdbId || video.id, false, video.imdbId, video.title)
+    return buildStreamServers(
+      video.tmdbId || video.id,
+      false,
+      video.imdbId,
+      video.title,
+      1,
+      1,
+      selectedLanguage
     );
-  }, [isTvShow, video, selectedSeason, activeEpisode]);
+  }, [isTvShow, video, selectedSeason, activeEpisode, selectedLanguage]);
 
   const currentVideoUrl = currentStreamServers?.[0]?.url || video?.videoUrl || '';
 
@@ -307,7 +345,7 @@ export default function WatchPage() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-[#090a0f] p-2.5 sm:p-4 lg:p-6 max-w-[1920px] mx-auto overflow-x-hidden min-w-0">
+    <div className="w-full min-h-screen bg-[#0b0b0c] p-2.5 sm:p-4 lg:p-6 max-w-[1920px] mx-auto overflow-x-hidden min-w-0">
       <div
         className={`flex flex-col ${
           isTheater ? 'space-y-6' : 'xl:flex-row gap-4 sm:gap-6'
@@ -315,7 +353,7 @@ export default function WatchPage() {
       >
         {/* Main Column: Player, Video Info, Comments */}
         <div className={`flex-1 min-w-0 ${isTheater ? 'w-full' : ''}`}>
-          {/* Custom Branded Player with Multi-Server Switcher */}
+          {/* Custom Branded Player with Multi-Server Switcher & Language Controls */}
           <CustomVideoPlayer
             src={currentVideoUrl}
             poster={video.thumbnailUrl}
@@ -323,6 +361,8 @@ export default function WatchPage() {
             streamServers={currentStreamServers}
             resolution={video.resolution}
             isUpcoming={video.isUpcoming}
+            currentLanguage={selectedLanguage}
+            onLanguageChange={handleLanguageChange}
             title={
               isTvShow
                 ? `${video.title} (S${selectedSeason} E${activeEpisode})`

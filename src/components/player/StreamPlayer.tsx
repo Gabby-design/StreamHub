@@ -9,17 +9,15 @@ import {
   VolumeX,
   Maximize,
   Minimize,
-  Settings,
   Tv,
   Check,
   Loader2,
-  Globe,
   Subtitles,
-  ExternalLink,
   Server,
   RotateCcw,
   RotateCw,
   FastForward,
+  Zap,
 } from 'lucide-react';
 
 interface StreamServerOption {
@@ -27,6 +25,8 @@ interface StreamServerOption {
   url: string;
   isEmbed?: boolean;
   quality?: string;
+  language?: string;
+  isEnglish?: boolean;
 }
 
 interface StreamPlayerProps {
@@ -70,45 +70,108 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
 }) => {
   const [isMounted, setIsMounted] = useState(false);
   const [audioTrack, setAudioTrack] = useState<'sub' | 'dub'>(initialAudioTrack);
+  const [failedServers, setFailedServers] = useState<string[]>([]);
+  const [serverNotice, setServerNotice] = useState<string | null>(null);
 
-  // Auto-default to the first full 1080p/720p stream server instead of trailer
+  // Auto-default to the guaranteed working English server first, instead of trailer
   const getInitialSrc = useCallback(() => {
     if (audioTrack === 'dub' && dubSrc) return dubSrc;
     if (streamServers && streamServers.length > 0) {
+      // Guaranteed working English server first
+      const workingEnglish = streamServers.find(
+        (s) =>
+          !s.name.toLowerCase().includes('trailer') &&
+          !s.url.includes('youtube') &&
+          !failedServers.includes(s.url) &&
+          (s.isEnglish || s.language === 'en' || s.name.toLowerCase().includes('english') || s.name.includes('Server 1'))
+      );
+      if (workingEnglish) return workingEnglish.url;
+
       const fullServer = streamServers.find(
-        (s) => !s.name.toLowerCase().includes('trailer') && !s.url.includes('youtube')
+        (s) =>
+          !s.name.toLowerCase().includes('trailer') &&
+          !s.url.includes('youtube') &&
+          !failedServers.includes(s.url)
       );
       if (fullServer) return fullServer.url;
       return streamServers[0].url;
     }
     return src;
-  }, [src, dubSrc, audioTrack, streamServers]);
+  }, [audioTrack, dubSrc, streamServers, failedServers, src]);
 
   const [activeSrc, setActiveSrc] = useState(src);
+  const [directTouchMode, setDirectTouchMode] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
+    queueMicrotask(() => {
+      setIsMounted(true);
+    });
   }, []);
 
   useEffect(() => {
-    setActiveSrc(getInitialSrc());
+    queueMicrotask(() => {
+      setActiveSrc(getInitialSrc());
+    });
   }, [getInitialSrc]);
+
+  const switchToNextWorkingServer = useCallback(() => {
+    if (!streamServers || streamServers.length <= 1) return;
+
+    const nextFailed = [...failedServers, activeSrc];
+    setFailedServers(nextFailed);
+
+    let nextServer = streamServers.find(
+      (s) =>
+        s.url !== activeSrc &&
+        !nextFailed.includes(s.url) &&
+        !s.name.toLowerCase().includes('trailer') &&
+        !s.url.includes('youtube') &&
+        (s.isEnglish || s.language === 'en' || s.name.toLowerCase().includes('english'))
+    );
+
+    if (!nextServer) {
+      nextServer = streamServers.find(
+        (s) =>
+          s.url !== activeSrc &&
+          !nextFailed.includes(s.url) &&
+          !s.name.toLowerCase().includes('trailer') &&
+          !s.url.includes('youtube')
+      );
+    }
+
+    if (!nextServer) {
+      setFailedServers([]);
+      nextServer =
+        streamServers.find(
+          (s) =>
+            !s.name.toLowerCase().includes('trailer') &&
+            !s.url.includes('youtube') &&
+            (s.isEnglish || s.language === 'en')
+        ) || streamServers[0];
+    }
+
+    if (nextServer) {
+      setActiveSrc(nextServer.url);
+      setServerNotice(`Switched to ${nextServer.name}`);
+      setTimeout(() => setServerNotice(null), 3500);
+    }
+  }, [streamServers, activeSrc, failedServers]);
 
   const [hasVideoError, setHasVideoError] = useState(false);
 
   useEffect(() => {
-    setHasVideoError(false);
+    queueMicrotask(() => {
+      setHasVideoError(false);
+    });
   }, [activeSrc]);
 
   // Shield state: Absorbs first ad-trigger click & neutralizes popups
-  const [absorbClick, setAbsorbClick] = useState(true);
   const [isSandboxed, setIsSandboxed] = useState(false);
-  const [directTouchMode, setDirectTouchMode] = useState(true);
 
   useEffect(() => {
-    setAbsorbClick(true);
-    setDirectTouchMode(true);
-    setIsSandboxed(false);
+    queueMicrotask(() => {
+      setIsSandboxed(false);
+    });
   }, [activeSrc]);
 
   const activeServer = streamServers?.find((s) => s.url === activeSrc);
@@ -267,14 +330,14 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
   // Direct Stream & HLS player setup
   useEffect(() => {
     if (isEmbedMode) {
-      setIsLoading(false);
+      queueMicrotask(() => setIsLoading(false));
       return;
     }
 
     const video = videoRef.current;
     if (!video) return;
 
-    setIsLoading(true);
+    queueMicrotask(() => setIsLoading(true));
 
     if (hlsRef.current) {
       hlsRef.current.destroy();
@@ -350,21 +413,21 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
     };
   }, [activeSrc, isHls, isEmbedMode]);
 
-  const togglePlay = useCallback(() => {
+  const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
     if (video.paused) video.play();
     else video.pause();
-  }, []);
+  };
 
-  const toggleMute = useCallback(() => {
+  const toggleMute = () => {
     const video = videoRef.current;
     if (!video) return;
     video.muted = !isMuted;
     setIsMuted(!isMuted);
-  }, [isMuted]);
+  };
 
-  const toggleFullscreen = useCallback(() => {
+  const toggleFullscreen = () => {
     const container = containerRef.current;
     if (!container) return;
     if (!document.fullscreenElement) {
@@ -372,7 +435,7 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
     } else {
       document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
     }
-  }, []);
+  };
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!progressBarRef.current || !videoRef.current) return;
@@ -393,27 +456,24 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
   const singleTapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const doubleTapFeedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const seekRelative = useCallback(
-    (seconds: number) => {
-      if (videoRef.current) {
-        const target = Math.max(0, Math.min(videoRef.current.currentTime + seconds, duration));
-        videoRef.current.currentTime = target;
-        setCurrentTime(target);
+  const seekRelative = (seconds: number) => {
+    if (videoRef.current) {
+      const target = Math.max(0, Math.min(videoRef.current.currentTime + seconds, duration));
+      videoRef.current.currentTime = target;
+      setCurrentTime(target);
+    }
+    try {
+      const iframe = containerRef.current?.querySelector('iframe');
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage({ method: 'seek', offset: seconds }, '*');
+        iframe.contentWindow.postMessage({ type: 'seek', offset: seconds }, '*');
       }
-      try {
-        const iframe = containerRef.current?.querySelector('iframe');
-        if (iframe?.contentWindow) {
-          iframe.contentWindow.postMessage({ method: 'seek', offset: seconds }, '*');
-          iframe.contentWindow.postMessage({ type: 'seek', offset: seconds }, '*');
-        }
-      } catch {
-        // cross-origin
-      }
-    },
-    [duration]
-  );
+    } catch {
+      // cross-origin
+    }
+  };
 
-  const startHoldSpeed = useCallback(() => {
+  const startHoldSpeed = () => {
     setIsHoldingFastForward(true);
     if (videoRef.current) {
       videoRef.current.playbackRate = 2.0;
@@ -425,9 +485,9 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
         // no-op
       }
     }
-  }, []);
+  };
 
-  const endHoldSpeed = useCallback(() => {
+  const endHoldSpeed = () => {
     let wasHolding = false;
     setIsHoldingFastForward((prev) => {
       wasHolding = prev;
@@ -437,20 +497,17 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
       videoRef.current.playbackRate = playbackSpeed;
     }
     return wasHolding;
-  }, [playbackSpeed]);
+  };
 
-  const handlePointerStart = useCallback(
-    (clientX: number, clientY: number) => {
-      touchStartPosRef.current = { x: clientX, y: clientY };
-      if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
-      holdTimeoutRef.current = setTimeout(() => {
-        startHoldSpeed();
-      }, 350);
-    },
-    [startHoldSpeed]
-  );
+  const handlePointerStart = (clientX: number, clientY: number) => {
+    touchStartPosRef.current = { x: clientX, y: clientY };
+    if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
+    holdTimeoutRef.current = setTimeout(() => {
+      startHoldSpeed();
+    }, 350);
+  };
 
-  const handlePointerMove = useCallback((clientX: number, clientY: number) => {
+  const handlePointerMove = (clientX: number, clientY: number) => {
     const dx = Math.abs(clientX - touchStartPosRef.current.x);
     const dy = Math.abs(clientY - touchStartPosRef.current.y);
     if (dx > 15 || dy > 15) {
@@ -459,145 +516,183 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
         holdTimeoutRef.current = null;
       }
     }
-  }, []);
+  };
 
-  const handlePointerEnd = useCallback(
-    (clientX: number) => {
-      const wasHolding = endHoldSpeed();
-      if (wasHolding) return;
+  const handlePointerEnd = (clientX: number) => {
+    const wasHolding = endHoldSpeed();
+    if (wasHolding) return;
 
-      const now = Date.now();
-      const container = containerRef.current;
-      if (!container) return;
+    const now = Date.now();
+    const container = containerRef.current;
+    if (!container) return;
 
-      const rect = container.getBoundingClientRect();
-      const relX = (clientX - rect.left) / rect.width;
-      const timeDiff = now - lastTapRef.current.time;
+    const rect = container.getBoundingClientRect();
+    const relX = (clientX - rect.left) / rect.width;
+    const timeDiff = now - lastTapRef.current.time;
 
-      if (timeDiff < 320) {
-        if (singleTapTimeoutRef.current) {
-          clearTimeout(singleTapTimeoutRef.current);
-          singleTapTimeoutRef.current = null;
-        }
-
-        if (relX < 0.38) {
-          seekRelative(-10);
-          if (doubleTapFeedbackTimeoutRef.current) clearTimeout(doubleTapFeedbackTimeoutRef.current);
-          setDoubleTapFeedback((prev) => ({
-            side: 'left',
-            count: prev?.side === 'left' ? prev.count + 10 : 10,
-          }));
-          doubleTapFeedbackTimeoutRef.current = setTimeout(() => {
-            setDoubleTapFeedback(null);
-          }, 750);
-        } else if (relX > 0.62) {
-          seekRelative(10);
-          if (doubleTapFeedbackTimeoutRef.current) clearTimeout(doubleTapFeedbackTimeoutRef.current);
-          setDoubleTapFeedback((prev) => ({
-            side: 'right',
-            count: prev?.side === 'right' ? prev.count + 10 : 10,
-          }));
-          doubleTapFeedbackTimeoutRef.current = setTimeout(() => {
-            setDoubleTapFeedback(null);
-          }, 750);
-        } else {
-          togglePlay();
-        }
-
-        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-          try {
-            navigator.vibrate(30);
-          } catch {
-            // no-op
-          }
-        }
-
-        lastTapRef.current = { time: 0, x: 0 };
-      } else {
-        lastTapRef.current = { time: now, x: relX };
-        if (singleTapTimeoutRef.current) clearTimeout(singleTapTimeoutRef.current);
-        singleTapTimeoutRef.current = setTimeout(() => {
-          setShowControls((prev) => !prev);
-        }, 280);
+    if (timeDiff < 320) {
+      if (singleTapTimeoutRef.current) {
+        clearTimeout(singleTapTimeoutRef.current);
+        singleTapTimeoutRef.current = null;
       }
-    },
-    [endHoldSpeed, seekRelative, togglePlay]
-  );
+
+      if (relX < 0.38) {
+        seekRelative(-10);
+        if (doubleTapFeedbackTimeoutRef.current) clearTimeout(doubleTapFeedbackTimeoutRef.current);
+        setDoubleTapFeedback((prev) => ({
+          side: 'left',
+          count: prev?.side === 'left' ? prev.count + 10 : 10,
+        }));
+        doubleTapFeedbackTimeoutRef.current = setTimeout(() => {
+          setDoubleTapFeedback(null);
+        }, 750);
+      } else if (relX > 0.62) {
+        seekRelative(10);
+        if (doubleTapFeedbackTimeoutRef.current) clearTimeout(doubleTapFeedbackTimeoutRef.current);
+        setDoubleTapFeedback((prev) => ({
+          side: 'right',
+          count: prev?.side === 'right' ? prev.count + 10 : 10,
+        }));
+        doubleTapFeedbackTimeoutRef.current = setTimeout(() => {
+          setDoubleTapFeedback(null);
+        }, 750);
+      } else {
+        togglePlay();
+      }
+
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate(30);
+        } catch {
+          // no-op
+        }
+      }
+
+      lastTapRef.current = { time: 0, x: 0 };
+    } else {
+      lastTapRef.current = { time: now, x: relX };
+      if (singleTapTimeoutRef.current) clearTimeout(singleTapTimeoutRef.current);
+      singleTapTimeoutRef.current = setTimeout(() => {
+        setShowControls((prev) => !prev);
+      }, 280);
+    }
+  };
 
   const serverSelectorBar = (
-    <div className="mb-3 rounded-2xl bg-[#11131a]/85 border border-white/10 p-3 backdrop-blur-md shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-3">
-      {/* Live Stream Status & Current Resolution Indicator */}
-      <div className="flex items-center gap-2.5 flex-wrap">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-indigo-500/10 border border-emerald-500/30 text-xs shadow-inner">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-          </span>
-          <span className="font-extrabold text-emerald-400 uppercase tracking-wider">
-            {activeResolution} Full HD
-          </span>
-          <span className="text-slate-500">•</span>
-          <span className="text-slate-200 font-medium truncate max-w-[160px] sm:max-w-xs">
-            {activeServer?.name || (isCurrentTrailer ? 'Official Preview' : 'Complete 1080p Episode')}
-          </span>
-        </div>
-
-        {/* Quick Resolution Switcher Buttons (1080p / 720p) */}
-        <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
-          <span className="text-[10px] font-bold text-slate-400 uppercase px-1.5 tracking-wider">
-            Quality:
-          </span>
-          {(['1080p', '720p'] as const).map((res) => {
-            const isResActive = activeResolution === res;
-            return (
-              <button
-                key={res}
-                onClick={() => handleResolutionSelect(res)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
-                  isResActive
-                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/40 ring-1 ring-white/20'
-                    : 'text-slate-400 hover:text-white hover:bg-white/10'
-                }`}
-                title={`Switch playback to ${res}`}
-              >
-                {res}
-                {isResActive && <Check className="h-3 w-3" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Stream Servers Carousel */}
-      {streamServers && streamServers.length > 0 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5 flex-shrink-0 mr-1">
-            <Server className="h-3.5 w-3.5 text-indigo-400" />
-            Servers:
-          </span>
-          {streamServers.map((srv, idx) => {
-            const isSelected = activeSrc === srv.url;
-            const isTrailerSrv = srv.name.toLowerCase().includes('trailer');
-
-            return (
-              <button
-                key={idx}
-                onClick={() => setActiveSrc(srv.url)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition flex-shrink-0 flex items-center gap-1.5 ${
-                  isSelected
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/40 ring-1 ring-white/20'
-                    : isTrailerSrv
-                    ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20'
-                    : 'bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/5'
-                }`}
-              >
-                <span>{srv.name}</span>
-                {isSelected && <Check className="h-3 w-3 text-white" />}
-              </button>
-            );
-          })}
+    <div className="mb-3 space-y-2">
+      {serverNotice && (
+        <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="flex items-center gap-2">
+            <Check className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0" />
+            <span>{serverNotice}</span>
+          </div>
+          <button
+            onClick={() => setServerNotice(null)}
+            className="text-emerald-400 hover:text-white text-xs underline cursor-pointer"
+          >
+            Dismiss
+          </button>
         </div>
       )}
+
+      <div className="rounded-2xl bg-[#11131a]/85 border border-white/10 p-3 backdrop-blur-md shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-3">
+        {/* Live Stream Status & Current Resolution Indicator */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-indigo-500/10 border border-emerald-500/30 text-xs shadow-inner">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span className="font-extrabold text-emerald-400 uppercase tracking-wider">
+              {activeResolution} Full HD
+            </span>
+            <span className="text-slate-500">•</span>
+            <span className="text-slate-200 font-medium truncate max-w-[160px] sm:max-w-xs">
+              {activeServer?.name || (isCurrentTrailer ? 'Official Preview' : 'Complete 1080p Episode')}
+            </span>
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-semibold text-[10px] border border-emerald-500/30">
+              Working English
+            </span>
+          </div>
+
+          {/* Quick Resolution Switcher Buttons (1080p / 720p) */}
+          <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase px-1.5 tracking-wider">
+              Quality:
+            </span>
+            {(['1080p', '720p'] as const).map((res) => {
+              const isResActive = activeResolution === res;
+              return (
+                <button
+                  key={res}
+                  onClick={() => handleResolutionSelect(res)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
+                    isResActive
+                      ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/40 ring-1 ring-white/20'
+                      : 'text-slate-400 hover:text-white hover:bg-white/10'
+                  }`}
+                  title={`Switch playback to ${res}`}
+                >
+                  {res}
+                  {isResActive && <Check className="h-3 w-3" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Stream Servers Carousel & Quick Working Switcher */}
+        {streamServers && streamServers.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+            {streamServers.length > 1 && (
+              <button
+                onClick={switchToNextWorkingServer}
+                className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 font-bold text-xs border border-emerald-500/30 transition flex items-center gap-1.5 flex-shrink-0"
+                title="Instantly switch to next healthy server"
+              >
+                <Zap className="h-3 w-3 text-emerald-400" />
+                <span>Next Server</span>
+              </button>
+            )}
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5 flex-shrink-0 mr-1">
+                <Server className="h-3.5 w-3.5 text-indigo-400" />
+                Servers:
+              </span>
+              {streamServers.map((srv, idx) => {
+                const isSelected = activeSrc === srv.url;
+                const isTrailerSrv = srv.name.toLowerCase().includes('trailer');
+                const isFailed = failedServers.includes(srv.url);
+
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setActiveSrc(srv.url)}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition flex-shrink-0 flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/40 ring-1 ring-white/20'
+                        : isTrailerSrv
+                        ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20'
+                        : isFailed
+                        ? 'bg-red-500/10 text-red-300 border border-red-500/20'
+                        : 'bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/5'
+                    }`}
+                  >
+                    <span>{srv.name}</span>
+                    {srv.isEnglish && (
+                      <span className="px-1 py-0.2 rounded bg-white/10 text-[9px] text-zinc-300">
+                        EN
+                      </span>
+                    )}
+                    {isSelected && <Check className="h-3 w-3 text-white" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -997,7 +1092,6 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
                   const nextSrv = srvs[(currentIdx + 1) % srvs.length];
                   if (nextSrv) {
                     setActiveSrc(nextSrv.url);
-                    setAbsorbClick(true);
                   }
                 }}
                 className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 font-semibold text-[11px] border border-indigo-500/30 transition flex items-center gap-1.5"

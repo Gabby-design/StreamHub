@@ -75,11 +75,20 @@ export interface Video {
   rating?: string | number;
   trailerUrl?: string;
   resolution?: '4K' | '1080p' | '720p' | '480p';
-  streamServers?: { name: string; url: string; isEmbed: boolean; quality?: string }[];
+  streamServers?: StreamServer[];
   isLive?: boolean;
   liveViewers?: number;
   liveStartedAt?: string;
   isUpcoming?: boolean;
+}
+
+export interface StreamServer {
+  name: string;
+  url: string;
+  isEmbed: boolean;
+  quality?: string;
+  language?: string;
+  isEnglish?: boolean;
 }
 
 

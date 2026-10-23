@@ -1,280 +1,173 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { Video } from '@/types';
 import { useApp } from '@/context/AppContext';
 import {
-  CheckCircle,
-  MoreVertical,
-  Clock,
-  ListPlus,
-  Share2,
+  Star,
+  Plus,
   Check,
-  Trash2,
+  Play,
+  Crown,
+  Share2,
 } from 'lucide-react';
-import { formatDuration } from '@/lib/utils';
-import { canDeleteVideo, isOwnerUser } from '@/context/AppContext';
-import { DeleteConfirmModal } from '@/components/common/DeleteConfirmModal';
 
 interface VideoCardProps {
   video: Video;
 }
 
 export const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
-  const { toggleWatchLater, savedVideoIds, addToQueue, user, deleteVideo } = useApp();
-  const [isHovered, setIsHovered] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const { toggleWatchLater, savedVideoIds } = useApp();
   const [copied, setCopied] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  const canDelete = canDeleteVideo(video, user);
-  const isOwner = isOwnerUser(user);
 
   const isSaved = savedVideoIds.includes(video.id);
+  const displayRating = video.rating || (video.mediaType === 'movie' ? '4.7' : '4.5');
+  const displayYear =
+    video.createdAt && video.createdAt.length === 4
+      ? video.createdAt
+      : video.releaseDate?.slice(0, 4) || '2024';
 
-  const isDirectMp4 =
-    !video.isHls &&
-    !video.videoUrl.startsWith('youtube:') &&
-    !video.videoUrl.includes('youtube.com') &&
-    !video.videoUrl.includes('youtu.be') &&
-    (video.videoUrl.endsWith('.mp4') || video.videoUrl.includes('.mp4?'));
+  const posterImage =
+    video.posterUrl && !video.posterUrl.includes('splash.png')
+      ? video.posterUrl
+      : video.thumbnailUrl;
 
-  const handleMouseEnter = () => {
-    setIsHovered(true);
-    if (videoRef.current && isDirectMp4) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(() => {
-        // Autoplay may be restricted
-      });
-    }
-  };
+  const [hasError, setHasError] = useState(false);
+  const [prevPoster, setPrevPoster] = useState(posterImage);
+  if (prevPoster !== posterImage) {
+    setPrevPoster(posterImage);
+    setHasError(false);
+  }
 
-  const handleMouseLeave = () => {
-    setIsHovered(false);
-    setShowMenu(false);
-    if (videoRef.current && isDirectMp4) {
-      videoRef.current.pause();
-    }
-  };
+  const currentImgSrc = hasError
+    ? video.thumbnailUrl && posterImage !== video.thumbnailUrl
+      ? video.thumbnailUrl
+      : 'https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg'
+    : posterImage;
 
-  const handleShare = (e: React.MouseEvent) => {
+  const handleShare = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const url = `${window.location.origin}/watch/${video.id}`;
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: video.title,
+          text: `Watch ${video.title} on filmbox`,
+          url,
+        });
+        return;
+      } catch {
+        // Fallback to clipboard if share modal was closed
+      }
+    }
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const formatViews = (count: number) => {
-    if (count >= 1000000) return (count / 1000000).toFixed(1) + 'M';
-    if (count >= 1000) return (count / 1000).toFixed(0) + 'K';
-    return count.toString();
+  const handleWatchlist = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWatchLater(video.id);
   };
 
   return (
-    <div
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      className="group flex flex-col rounded-2xl bg-[#11131a]/60 hover:bg-[#141722] border border-white/5 hover:border-indigo-500/30 p-2.5 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-950/20"
-    >
-      {/* Thumbnail and Hover Preview */}
-      <Link href={`/watch/${video.id}`} className="relative block aspect-video w-full overflow-hidden rounded-xl bg-slate-900">
+    <div className="group relative flex flex-col rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-[#E50914]/40 p-2.5 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-black/90">
+      {/* Sleek Vertical 2:3 Aspect Ratio Poster */}
+      <Link
+        href={`/watch/${video.id}`}
+        className="relative block aspect-[2/3] w-full overflow-hidden rounded-xl bg-zinc-900 shadow-md"
+      >
         <img
-          src={video.thumbnailUrl}
+          src={currentImgSrc}
           alt={video.title}
-          className={`h-full w-full object-cover transition-opacity duration-300 ${
-            isHovered && isDirectMp4 ? 'opacity-0' : 'opacity-100 group-hover:scale-105 transition-transform duration-300'
-          }`}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => {
+            setHasError(true);
+          }}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
 
-        {/* Video short loop preview on hover for direct MP4 sources only */}
-        {isDirectMp4 && (
-          <video
-            ref={videoRef}
-            src={video.videoUrl}
-            muted
-            loop
-            playsInline
-            preload="none"
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
-              isHovered ? 'opacity-100' : 'opacity-0'
+        {/* Ambient Bottom Gradient on Poster */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+
+        {/* Top Badges */}
+        <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10 pointer-events-none">
+          {/* Subscription pill on left */}
+          <span className="flex items-center gap-1 rounded-full bg-black/65 backdrop-blur-md border border-amber-400/30 px-2 py-0.5 text-[10px] font-bold text-amber-400 shadow-sm pointer-events-auto">
+            <Crown className="h-2.5 w-2.5" />
+            Subscription
+          </span>
+
+          {/* '+' icon on top right */}
+          <button
+            onClick={handleWatchlist}
+            className={`h-7 w-7 rounded-full backdrop-blur-md border flex items-center justify-center transition-all duration-200 pointer-events-auto shadow-sm ${
+              isSaved
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                : 'bg-black/65 hover:bg-[#E50914] text-white border-white/20 hover:border-transparent'
             }`}
-          />
-        )}
-
-        {/* Duration badge */}
-        <div className="absolute bottom-2 right-2 rounded-md bg-black/85 px-1.5 py-0.5 text-[11px] font-semibold text-white tracking-wider backdrop-blur-sm">
-          {formatDuration(video.duration, video.durationSec)}
+            title={isSaved ? 'Remove from Watchlist' : 'Add to Watchlist'}
+            aria-label="Toggle Watchlist"
+          >
+            {isSaved ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+          </button>
         </div>
 
-        {/* Resolution badge (1080p / 720p / 4K) */}
-        <div className="absolute top-2 right-2 rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 px-2 py-0.5 text-[10px] font-bold text-white tracking-wider backdrop-blur-md shadow-lg shadow-indigo-950/50 flex items-center gap-1 border border-white/20">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          {video.resolution || (video.mediaType === 'movie' || video.category === 'Movies' ? '1080p' : '720p')}
-        </div>
+        {/* Hover / Active Reveal Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/85 to-black/40 p-3 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+          <p className="text-[11px] text-zinc-300 line-clamp-3 leading-relaxed mb-3">
+            {video.description}
+          </p>
 
-        {/* Media Type / Format badge */}
-        <div className="absolute top-2 left-2 flex items-center gap-1">
-          {video.isLive ? (
-            <div className="rounded-md bg-red-600/90 border border-red-400/40 px-2 py-0.5 text-[10px] font-bold text-white tracking-wider uppercase backdrop-blur-sm flex items-center gap-1 shadow-lg shadow-red-950/60">
-              <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping" />
-              LIVE
+          <div className="flex items-center gap-2">
+            {/* Mini Red CTA ("Watch Now") */}
+            <div className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#E50914] hover:bg-[#b80710] text-white text-xs font-bold shadow-[0_0_15px_rgba(229,9,20,0.5)] transition">
+              <Play className="h-3 w-3 fill-white" />
+              <span>Watch Now</span>
             </div>
-          ) : video.isHls ? (
-            <div className="rounded-md bg-indigo-600/90 px-1.5 py-0.5 text-[10px] font-bold text-white tracking-wider uppercase backdrop-blur-sm">
-              HLS 4K
-            </div>
-          ) : video.mediaType === 'movie' || video.category === 'Movies' ? (
-            <div className="rounded-md bg-purple-600/90 border border-purple-400/30 px-1.5 py-0.5 text-[10px] font-bold text-white tracking-wider uppercase backdrop-blur-sm">
-              Full Movie
-            </div>
-          ) : video.mediaType === 'anime' || video.category === 'Anime' ? (
-            <div className="rounded-md bg-sky-600/90 border border-sky-400/30 px-1.5 py-0.5 text-[10px] font-bold text-white tracking-wider uppercase backdrop-blur-sm">
-              Full Series
-            </div>
-          ) : video.mediaType === 'cartoon' || video.category === 'Cartoons' ? (
-            <div className="rounded-md bg-emerald-600/90 border border-emerald-400/30 px-1.5 py-0.5 text-[10px] font-bold text-white tracking-wider uppercase backdrop-blur-sm">
-              Full Show
-            </div>
-          ) : null}
+
+            {/* Quick Share Icon */}
+            <button
+              onClick={handleShare}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white transition"
+              title={copied ? 'Link Copied!' : 'Share Video'}
+              aria-label="Share Video"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </Link>
 
-      {/* Video Metadata */}
-      <div className="mt-3 flex items-start gap-3">
-        {/* Channel Avatar */}
+      {/* Bottom Card Metadata */}
+      <div className="mt-2.5 flex flex-col flex-1 justify-between">
+        {/* Rating & Release Year */}
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1 text-amber-400 font-bold">
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+            <span>{displayRating}</span>
+          </div>
+          <span className="text-[11px] font-mono text-zinc-500">{displayYear}</span>
+        </div>
+
+        {/* Movie Title */}
         <Link
-          href={`/channel/${video.channel.handle.replace('@', '')}`}
-          className="flex-shrink-0"
+          href={`/watch/${video.id}`}
+          className="mt-1 text-sm font-bold text-white group-hover:text-[#E50914] transition-colors line-clamp-1"
+          title={video.title}
         >
-          <img
-            src={video.channel.avatarUrl}
-            alt={video.channel.name}
-            className="h-9 w-9 rounded-full object-cover ring-1 ring-white/10 hover:ring-indigo-500 transition"
-          />
+          {video.title}
         </Link>
 
-        {/* Content details */}
-        <div className="flex-1 min-w-0">
-          <Link href={`/watch/${video.id}`} className="block">
-            <h3 className="line-clamp-2 text-sm font-semibold text-slate-100 group-hover:text-indigo-300 transition-colors leading-snug">
-              {video.title}
-            </h3>
-          </Link>
-
-          <Link
-            href={`/channel/${video.channel.handle.replace('@', '')}`}
-            className="mt-1 flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 transition"
-          >
-            <span className="truncate">{video.channel.name}</span>
-            {video.channel.isVerified && (
-              <CheckCircle className="h-3 w-3 text-indigo-400 flex-shrink-0" />
-            )}
-          </Link>
-
-          <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-400">
-            <span className="rounded bg-indigo-500/15 border border-indigo-500/30 px-1.5 py-0.2 text-[10px] font-bold text-indigo-300">
-              {video.resolution || '1080p'} Full HD
-            </span>
-            <span>•</span>
-            <span className="text-slate-500">{formatViews(video.views)} views</span>
-            <span>•</span>
-            <span className="text-slate-500">{video.createdAt}</span>
-          </div>
-        </div>
-
-        {/* Quick Actions Menu */}
-        <div className="relative">
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setShowMenu(!showMenu);
-            }}
-            className="rounded-full p-1 text-slate-400 hover:bg-white/10 hover:text-white transition opacity-0 group-hover:opacity-100"
-            aria-label="Video options"
-          >
-            <MoreVertical className="h-4 w-4" />
-          </button>
-
-          {showMenu && (
-            <div className="absolute right-0 top-8 w-44 rounded-xl glass-dropdown p-1.5 shadow-2xl z-30 animate-in fade-in duration-150">
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  addToQueue(video);
-                  setShowMenu(false);
-                }}
-                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-200 hover:bg-white/10 rounded-lg transition"
-              >
-                <ListPlus className="h-3.5 w-3.5 text-indigo-400" />
-                Add to Queue
-              </button>
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  toggleWatchLater(video.id);
-                  setShowMenu(false);
-                }}
-                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-200 hover:bg-white/10 rounded-lg transition"
-              >
-                <Clock className="h-3.5 w-3.5 text-indigo-400" />
-                {isSaved ? 'Remove Saved' : 'Save to Watch Later'}
-              </button>
-              <button
-                onClick={handleShare}
-                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-200 hover:bg-white/10 rounded-lg transition"
-              >
-                {copied ? (
-                  <>
-                    <Check className="h-3.5 w-3.5 text-emerald-400" />
-                    <span className="text-emerald-400 font-medium">Link Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="h-3.5 w-3.5 text-indigo-400" />
-                    Share Video
-                  </>
-                )}
-              </button>
-
-              {canDelete && (
-                <>
-                  <div className="my-1 border-t border-white/10" />
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setShowMenu(false);
-                      setShowDeleteModal(true);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-rose-400 hover:bg-rose-500/15 rounded-lg transition"
-                  >
-                    <Trash2 className="h-3.5 w-3.5 text-rose-400" />
-                    Delete Movie
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+        {/* Genre / Subtitle */}
+        <span className="text-[11px] text-zinc-400 line-clamp-1 mt-0.5">
+          {video.genres?.slice(0, 2).join(', ') || video.category || 'Cinema'}
+        </span>
       </div>
-
-      <DeleteConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={async () => {
-          await deleteVideo(video.id);
-        }}
-        videoTitle={video.title}
-        thumbnailUrl={video.thumbnailUrl}
-        isOwner={isOwner}
-      />
     </div>
   );
 };

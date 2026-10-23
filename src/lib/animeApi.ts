@@ -250,7 +250,7 @@ const CURATED_ANIME: AnimeSeries[] = [
       },
     ],
     bannerUrl: 'https://image.tmdb.org/t/p/w1280/zAfK8cVjJiYUsVLDkHoIgxJh319.jpg',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/hFWP5HkbVEe40hrXgtCeKpRFHGv.jpg',
+    posterUrl: 'https://image.tmdb.org/t/p/w500/6qQzMJG27XOJsyAEEIisoJB45j2.jpg',
   },
   {
     id: 'demon-slayer',
@@ -434,7 +434,7 @@ const CURATED_ANIME: AnimeSeries[] = [
 ];
 
 // In-memory cache to prevent duplicate fetches
-const apiCache = new Map<string, { timestamp: number; data: any }>();
+const apiCache = new Map<string, { timestamp: number; data: AnimeSeries[] }>();
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 /**
@@ -622,8 +622,27 @@ export async function getAnimeDetails(id: string): Promise<AnimeSeries | null> {
   return null;
 }
 
-function mapKitsuToAnimeSeries(item: any): AnimeSeries {
-  const attr = item.attributes;
+interface KitsuItem {
+  id: string;
+  attributes?: {
+    youtubeVideoId?: string;
+    canonicalTitle?: string;
+    titles?: { en?: string; en_jp?: string; ja_jp?: string };
+    episodeCount?: number;
+    posterImage?: { large?: string; medium?: string; small?: string; tiny?: string };
+    coverImage?: { large?: string; small?: string };
+    synopsis?: string;
+    averageRating?: number;
+    subtype?: string;
+    ageRating?: string;
+    ageRatingGuide?: string;
+    status?: string;
+    startDate?: string;
+  };
+}
+
+function mapKitsuToAnimeSeries(item: KitsuItem): AnimeSeries {
+  const attr = item.attributes || {};
   const ytId = attr.youtubeVideoId;
   const title = attr.canonicalTitle || attr.titles?.en_jp || 'Anime';
   const titleEnglish = attr.titles?.en || attr.canonicalTitle || title;

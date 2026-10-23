@@ -1,333 +1,207 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { MOCK_CHANNELS } from '@/lib/mockData';
 import {
   Home,
-  Compass,
-  Tv,
-  Film,
-  History,
-  ThumbsUp,
-  Clock,
-  Sparkles,
-  Layers,
-  Moon,
-  Info,
-  Shield,
-  PlaySquare,
-  Radio,
-  X,
-  Menu,
+  LayoutGrid,
+  Users,
+  Folder,
+  Heart,
+  Share2,
+  MessageSquare,
+  Clapperboard,
+  Check,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
-  const {
-    sidebarOpen,
-    setSidebarOpen,
-    subscribedChannelIds,
-    setSearchQuery,
-    setSelectedCategory,
-  } = useApp();
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  const { setSelectedCategory, setSearchQuery } = useApp();
+  const [copiedShare, setCopiedShare] = useState(false);
 
   const isWatchPage = pathname.startsWith('/watch/');
 
-  const mainLinks = [
-    { label: 'Home', href: '/', icon: Home },
-    { label: 'Live Streams', href: '/live', icon: Radio, isLive: true },
-    { label: 'Anime & Movies', href: '/browse', icon: Film },
-    { label: 'Trending', href: '/trending', icon: Compass },
-    { label: 'Subscriptions', href: '/subscriptions', icon: Tv },
-  ];
-
-  const libraryLinks = [
-    { label: 'Library', href: '/library', icon: Layers },
-    { label: 'History', href: '/history', icon: History },
-    { label: 'Liked Videos', href: '/liked', icon: ThumbsUp },
-    { label: 'Watch Later', href: '/saved', icon: Clock },
-  ];
-
-  const subscribedChannels = Object.values(MOCK_CHANNELS).filter((ch) =>
-    mounted ? subscribedChannelIds.includes(ch.id) : ['ch_blender', 'ch_tech'].includes(ch.id)
-  );
-
-  const renderNavItems = (isDrawer: boolean) => (
-    <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-      {/* Main Links */}
-      <div className="space-y-1">
-        {mainLinks.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href;
-          const showLabel = isDrawer || sidebarOpen;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => {
-                if (isDrawer) setSidebarOpen(false);
-                if (item.href === '/') {
-                  setSearchQuery('');
-                  setSelectedCategory('All');
-                  if (typeof window !== 'undefined') {
-                    window.history.pushState(null, '', '/');
-                  }
-                }
-              }}
-              className={`flex items-center gap-4 rounded-xl px-3 py-2.5 text-sm font-medium transition duration-150 ${
-                isActive
-                  ? 'bg-indigo-600/15 text-indigo-400 font-semibold border border-indigo-500/20'
-                  : 'text-slate-300 hover:bg-white/5 hover:text-white'
-              } ${!showLabel && 'justify-center px-0'}`}
-              title={!showLabel ? item.label : undefined}
-            >
-              <Icon
-                className={`h-5 w-5 ${
-                  isActive ? 'text-indigo-400' : item.isLive ? 'text-rose-500 animate-pulse' : 'text-slate-400'
-                }`}
-              />
-              {showLabel && (
-                <span className="flex items-center justify-between flex-1">
-                  <span>{item.label}</span>
-                  {item.isLive && (
-                    <span className="flex items-center gap-1 text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                      <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
-                      LIVE
-                    </span>
-                  )}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Library Section */}
-      <div className="border-t border-white/5 pt-4 space-y-1">
-        {(isDrawer || sidebarOpen) && (
-          <div className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Library
-          </div>
-        )}
-        {libraryLinks.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href;
-          const showLabel = isDrawer || sidebarOpen;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => {
-                if (isDrawer) setSidebarOpen(false);
-              }}
-              className={`flex items-center gap-4 rounded-xl px-3 py-2.5 text-sm font-medium transition duration-150 ${
-                isActive
-                  ? 'bg-indigo-600/15 text-indigo-400 font-semibold border border-indigo-500/20'
-                  : 'text-slate-300 hover:bg-white/5 hover:text-white'
-              } ${!showLabel && 'justify-center px-0'}`}
-              title={!showLabel ? item.label : undefined}
-            >
-              <Icon className={`h-5 w-5 ${isActive ? 'text-indigo-400' : 'text-slate-400'}`} />
-              {showLabel && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Subscribed Channels */}
-      {(isDrawer || sidebarOpen) && (
-        <div className="border-t border-white/5 pt-4 space-y-2">
-          <div className="flex items-center justify-between px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-            <span>Subscriptions</span>
-            <span className="text-[10px] text-indigo-400 font-mono">
-              {subscribedChannels.length}
-            </span>
-          </div>
-          <div className="space-y-1">
-            {subscribedChannels.map((channel) => (
-              <Link
-                key={channel.id}
-                href={`/channel/${channel.handle.replace('@', '')}`}
-                onClick={() => {
-                  if (isDrawer) setSidebarOpen(false);
-                }}
-                className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-slate-300 hover:bg-white/5 hover:text-white transition group"
-              >
-                <img
-                  src={channel.avatarUrl}
-                  alt={channel.name}
-                  className="h-6 w-6 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-indigo-500"
-                />
-                <span className="truncate text-xs font-medium">{channel.name}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderFooter = (isDrawer: boolean) => {
-    if (isDrawer || sidebarOpen) {
-      return (
-        <div className="border-t border-white/5 p-4 text-[11px] text-slate-500 space-y-2">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="flex items-center gap-1.5 font-medium">
-              <Moon className="h-3.5 w-3.5 text-indigo-400" />
-              Dark Theme (Active)
-            </span>
-            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-              v1.0 Ready
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 text-slate-500">
-            <Link href="/" className="hover:text-slate-300">About</Link>
-            <Link href="/" className="hover:text-slate-300">Press</Link>
-            <Link href="/" className="hover:text-slate-300">Terms</Link>
-            <Link href="/" className="hover:text-slate-300">Privacy</Link>
-          </div>
-          <p className="text-[10px] text-slate-600">StreamHub Inc. All rights reserved.</p>
-        </div>
-      );
+  const handleShareClick = async () => {
+    if (typeof window !== 'undefined') {
+      const url = window.location.href;
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        try {
+          await navigator.share({
+            title: 'filmbox - Premium Streaming',
+            url,
+          });
+          return;
+        } catch {
+          // Fallback to clipboard if share cancelled
+        }
+      }
+      navigator.clipboard.writeText(url);
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2000);
     }
-    return (
-      <div className="border-t border-white/5 p-3 flex justify-center">
-        <Moon className="h-4 w-4 text-slate-500" />
-      </div>
-    );
   };
 
-  // On watch page: Always render as floating slide-out drawer with backdrop
-  if (isWatchPage) {
-    return (
-      <>
-        {/* Backdrop overlay */}
-        <div
-          onClick={() => setSidebarOpen(false)}
-          className={`fixed inset-0 z-50 bg-black/75 backdrop-blur-xs transition-opacity duration-300 ${
-            sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-          }`}
-          aria-hidden="true"
-        />
+  const navItems = [
+    {
+      label: 'Home',
+      href: '/',
+      icon: Home,
+      isActive: pathname === '/',
+      onClick: () => {
+        setSearchQuery('');
+        setSelectedCategory('All');
+      },
+    },
+    {
+      label: 'Browse / Grid',
+      href: '/browse',
+      icon: LayoutGrid,
+      isActive: pathname === '/browse',
+    },
+    {
+      label: 'Community',
+      href: '/subscriptions',
+      icon: Users,
+      isActive: pathname === '/subscriptions',
+    },
+    {
+      label: 'Library',
+      href: '/library',
+      icon: Folder,
+      isActive: pathname === '/library' || pathname === '/history',
+    },
+    {
+      label: 'Favorites',
+      href: '/liked',
+      icon: Heart,
+      isActive: pathname === '/liked' || pathname === '/saved',
+    },
+    {
+      label: 'Share',
+      icon: Share2,
+      isAction: true,
+      onClick: handleShareClick,
+      badgeText: copiedShare ? 'Copied!' : undefined,
+    },
+    {
+      label: 'Live Chat',
+      href: '/live',
+      icon: MessageSquare,
+      isActive: pathname === '/live',
+    },
+  ];
 
-        {/* Floating Slide-out Drawer */}
-        <aside
-          suppressHydrationWarning
-          className={`fixed left-0 top-0 bottom-0 z-50 w-72 flex flex-col border-r border-white/10 bg-[#090a0f] shadow-2xl transition-transform duration-300 ease-in-out ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
-          }`}
-        >
-          {/* Drawer Top Header with Logo and Close */}
-          <div className="h-16 px-4 flex items-center justify-between border-b border-white/5 flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setSidebarOpen(false)}
-                className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white transition"
-                aria-label="Toggle Menu"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-              <Link
-                href="/"
-                onClick={() => setSidebarOpen(false)}
-                className="flex items-center gap-2 group"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-pink-500 shadow-md">
-                  <PlaySquare className="h-4 w-4 text-white" />
-                </div>
-                <span className="text-base font-bold text-white">
-                  Stream<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400">Hub</span>
-                </span>
-              </Link>
-            </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white transition"
-              aria-label="Close Sidebar"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          {renderNavItems(true)}
-          {renderFooter(true)}
-        </aside>
-      </>
-    );
-  }
-
-  // On browse pages: Desktop docked sidebar + mobile slide-out drawer
   return (
     <>
-      {/* Mobile Drawer Backdrop */}
-      <div
-        onClick={() => setSidebarOpen(false)}
-        className={`md:hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-xs transition-opacity duration-300 ${
-          sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-        aria-hidden="true"
-      />
-
-      {/* Mobile Drawer */}
+      {/* Desktop Slim Icon Sidebar (Left, w-20 fixed) */}
       <aside
-        suppressHydrationWarning
-        className={`md:hidden fixed left-0 top-0 bottom-0 z-50 w-72 flex flex-col border-r border-white/10 bg-[#090a0f] shadow-2xl transition-transform duration-300 ease-in-out ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
+        className={`hidden md:flex fixed left-0 top-0 bottom-0 z-40 w-20 flex-col items-center justify-between py-5 bg-[#0b0b0c] border-r border-white/10 transition-transform duration-300 ${
+          isWatchPage ? 'md:translate-x-0' : ''
         }`}
       >
-        <div className="h-16 px-4 flex items-center justify-between border-b border-white/5 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white transition"
-              aria-label="Toggle Menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <Link
-              href="/"
-              onClick={() => setSidebarOpen(false)}
-              className="flex items-center gap-2 group"
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-pink-500 shadow-md">
-                <PlaySquare className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-base font-bold text-white">
-                Stream<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400">Hub</span>
-              </span>
-            </Link>
-          </div>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white transition"
-            aria-label="Close Sidebar"
+        {/* Brand Logo Icon at Top */}
+        <div className="flex flex-col items-center">
+          <Link
+            href="/"
+            className="group flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#E50914] to-[#990000] text-white shadow-[0_0_20px_rgba(229,9,20,0.45)] hover:scale-105 transition-all duration-200"
+            title="filmbox - Home"
           >
-            <X className="h-5 w-5" />
-          </button>
+            <Clapperboard className="h-5 w-5 text-white transition-transform group-hover:rotate-6" />
+          </Link>
         </div>
 
-        {renderNavItems(true)}
-        {renderFooter(true)}
+        {/* Vertical Icon Navigation Stack */}
+        <nav className="flex flex-col items-center gap-3 w-full px-3">
+          {navItems.map((item, idx) => {
+            const Icon = item.icon;
+            const active = item.isActive;
+
+            if (item.isAction) {
+              return (
+                <button
+                  key={idx}
+                  onClick={item.onClick}
+                  className={`group relative flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-200 ${
+                    copiedShare
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+                  }`}
+                  aria-label={item.label}
+                >
+                  {copiedShare ? (
+                    <Check className="h-5 w-5 text-emerald-400 animate-pulse" />
+                  ) : (
+                    <Icon className="h-5 w-5 transition-transform group-hover:scale-110" />
+                  )}
+
+                  {/* Tooltip on hover */}
+                  <span className="pointer-events-none absolute left-full ml-3 rounded-lg bg-[#18181b] border border-white/10 px-2.5 py-1 text-xs font-semibold text-white shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap z-50">
+                    {item.badgeText || item.label}
+                  </span>
+                </button>
+              );
+            }
+
+            return (
+              <Link
+                key={item.href || idx}
+                href={item.href || '/'}
+                onClick={item.onClick}
+                className={`group relative flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-200 ${
+                  active
+                    ? 'bg-white/[0.08] text-[#E50914] border border-[#E50914]/40 shadow-[0_0_18px_rgba(229,9,20,0.35)]'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+                }`}
+                aria-label={item.label}
+              >
+                <Icon className={`h-5 w-5 transition-transform group-hover:scale-110 ${active ? 'text-[#E50914]' : ''}`} />
+
+                {/* Active indicator dot */}
+                {active && (
+                  <span className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-1 h-4 bg-[#E50914] rounded-r-full shadow-[0_0_8px_#E50914]" />
+                )}
+
+                {/* Tooltip on hover */}
+                <span className="pointer-events-none absolute left-full ml-3 rounded-lg bg-[#18181b] border border-white/10 px-2.5 py-1 text-xs font-semibold text-white shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap z-50">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Bottom Profile Dot or Status */}
+        <div className="flex flex-col items-center">
+          <div
+            className="h-9 w-9 rounded-full bg-white/[0.05] border border-white/10 flex items-center justify-center text-xs font-bold text-zinc-300 hover:border-[#E50914]/50 transition cursor-pointer"
+            title="filmbox v2.0"
+          >
+            <span className="h-2 w-2 rounded-full bg-[#E50914] animate-pulse" />
+          </div>
+        </div>
       </aside>
 
-      {/* Desktop Docked Sidebar */}
-      <aside
-        suppressHydrationWarning
-        className={`hidden md:flex fixed left-0 top-16 bottom-0 z-30 flex-col border-r border-white/5 bg-[#090a0f] transition-all duration-300 ease-in-out ${
-          sidebarOpen ? 'w-64' : 'w-20'
-        }`}
-      >
-        {renderNavItems(false)}
-        {renderFooter(false)}
-      </aside>
+      {/* Mobile Bottom Navigation Bar (Fixed for phone screens with iOS safe-area) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0b0b0c]/95 backdrop-blur-xl border-t border-white/10 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around">
+        {navItems.slice(0, 5).map((item, idx) => {
+          const Icon = item.icon;
+          const active = item.isActive;
+          return (
+            <Link
+              key={idx}
+              href={item.href || '/'}
+              onClick={item.onClick}
+              className={`flex flex-col items-center gap-1 p-2 rounded-xl text-xs ${
+                active ? 'text-[#E50914]' : 'text-zinc-400'
+              }`}
+            >
+              <Icon className="h-5 w-5" />
+            </Link>
+          );
+        })}
+      </nav>
     </>
   );
 };

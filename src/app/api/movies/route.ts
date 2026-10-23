@@ -53,9 +53,10 @@ export async function GET(request: NextRequest) {
       count: videos.length,
       videos,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch catalog';
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch catalog' },
+      { success: false, error: message },
       { status: 500 }
     );
   }
@@ -87,9 +88,10 @@ export async function DELETE(request: NextRequest) {
       message: 'Movie deleted successfully from server',
       id,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to delete movie from server';
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to delete movie from server' },
+      { success: false, error: message },
       { status: 500 }
     );
   }

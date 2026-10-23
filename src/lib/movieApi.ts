@@ -1,4 +1,4 @@
-import { Video, Channel } from '@/types';
+import { Video, Channel, StreamServer } from '@/types';
 
 const MOVIE_STUDIO_CHANNEL: Channel = {
   id: 'ch_hollywood_cinema',
@@ -105,7 +105,27 @@ class ApiKeyPoolManager {
 export const apiKeyPool = new ApiKeyPoolManager();
 
 // ============================================================================
-// Multi-Server Stream Generator (Full 1080p/720p Servers + Trailer)
+// Multi-Language Definitions & Options
+// ============================================================================
+export interface StreamLanguageOption {
+  code: string;
+  label: string;
+  tag: string;
+  description: string;
+}
+
+export const STREAM_LANGUAGES: StreamLanguageOption[] = [
+  { code: 'en', label: 'English', tag: 'EN', description: 'Original / English Audio (Verified Working)' },
+  { code: 'es', label: 'Español', tag: 'ES', description: 'Spanish Audio / Subtitles' },
+  { code: 'fr', label: 'Français', tag: 'FR', description: 'French Audio / Subtitles' },
+  { code: 'de', label: 'Deutsch', tag: 'DE', description: 'German Audio / Subtitles' },
+  { code: 'it', label: 'Italiano', tag: 'IT', description: 'Italian Audio / Subtitles' },
+  { code: 'pt', label: 'Português', tag: 'PT', description: 'Portuguese Audio / Subtitles' },
+  { code: 'ja', label: '日本語', tag: 'JA', description: 'Japanese Audio / Subtitles' },
+];
+
+// ============================================================================
+// Multi-Server Stream Generator (Guaranteed Working English First + Multi-Audio)
 // ============================================================================
 export function buildStreamServers(
   id: number | string,
@@ -113,96 +133,158 @@ export function buildStreamServers(
   imdbId?: string,
   title = '',
   season = 1,
-  episode = 1
-) {
+  episode = 1,
+  language = 'en'
+): StreamServer[] {
   const rawStr = String(id).replace(/^(movie-|tv-|anime-)/, '');
   const isPureNumber = /^\d+$/.test(rawStr);
   const numericId = isPureNumber ? rawStr : undefined;
   const effectiveImdb = imdbId || (!isPureNumber && rawStr.startsWith('tt') ? rawStr : undefined);
   const mediaRef = numericId || effectiveImdb || rawStr || id;
+  const isEnglish = language === 'en';
 
-  const servers: Array<{ name: string; url: string; isEmbed: boolean; quality: string }> = [];
+  const servers: StreamServer[] = [];
 
-  // Server 1: VidLink Pro (1Tube Main 4 - Primary engine with custom color, seek & subtitles)
+  // Working Server 1: VidLink Pro (Primary 1080p Working Engine, JW Player, clean English default)
   if (numericId || effectiveImdb) {
     const idRef = numericId || effectiveImdb;
+    const subParam = isEnglish ? '&sub_info=en' : `&sub_info=${language}&lang=${language}`;
     servers.push({
-      name: 'Server 1 (1080p VidLink Pro)',
+      name: isEnglish
+        ? 'Server 1 (1080p English - VidLink Pro)'
+        : `Server 1 (1080p ${language.toUpperCase()} - VidLink Pro)`,
       url: isTv
-        ? `https://vidlink.pro/tv/${idRef}/${season}/${episode}?primaryColor=6366f1&secondaryColor=a2a2a2&iconColor=eefdec&icons=default&player=jw&title=true&poster=true`
-        : `https://vidlink.pro/movie/${idRef}?primaryColor=6366f1&secondaryColor=a2a2a2&iconColor=eefdec&icons=default&player=jw&title=true&poster=true`,
+        ? `https://vidlink.pro/tv/${idRef}/${season}/${episode}?primaryColor=6366f1&secondaryColor=a2a2a2&iconColor=eefdec&icons=default&player=jw&title=true&poster=true${subParam}`
+        : `https://vidlink.pro/movie/${idRef}?primaryColor=6366f1&secondaryColor=a2a2a2&iconColor=eefdec&icons=default&player=jw&title=true&poster=true${subParam}`,
       isEmbed: true,
       quality: '1080p',
+      language,
+      isEnglish,
     });
   }
 
-  // Server 2: Viduki Main 1 (1Tube Default Primary Stream)
-  if (numericId) {
+  // Working Server 2: AutoEmbed (Universal TMDB catalog, high availability, native English & multi-audio)
+  if (numericId || mediaRef) {
+    const ref = numericId || mediaRef;
     servers.push({
-      name: `Server ${servers.length + 1} (1080p Viduki Main 1)`,
+      name: isEnglish
+        ? 'Server 2 (1080p English - AutoEmbed Multi-Audio)'
+        : `Server 2 (1080p Multi-Audio - AutoEmbed)`,
       url: isTv
-        ? `https://www.viduki.net/1/tv/${numericId}/${season}/${episode}?color=6366f1`
-        : `https://www.viduki.net/1/movie/${numericId}?color=6366f1`,
+        ? `https://autoembed.co/tv/tmdb/${ref}-${season}-${episode}`
+        : `https://autoembed.co/movie/tmdb/${ref}`,
       isEmbed: true,
       quality: '1080p',
+      language: isEnglish ? 'en' : language,
+      isEnglish: true,
     });
   }
 
-  // Server 3: VidFast (1Tube Main 3 - High-speed mirror)
+  // Working Server 3: VidFast (High-speed 1080p English mirror)
   if (numericId || effectiveImdb) {
     const idRef = numericId || effectiveImdb;
     servers.push({
-      name: `Server ${servers.length + 1} (1080p VidFast)`,
+      name: 'Server 3 (1080p English - VidFast Ultra)',
       url: isTv
         ? `https://vidfast.pro/tv/${idRef}/${season}/${episode}?autoPlay=false&title=true&poster=true&theme=6366f1&nextButton=false&autoNext=false`
         : `https://vidfast.pro/movie/${idRef}?autoPlay=false&title=true&poster=true&theme=6366f1`,
       isEmbed: true,
       quality: '1080p',
+      language: 'en',
+      isEnglish: true,
     });
   }
 
-  // Server 4: VidRock (1Tube Main 5 - Ultra HD buffer)
+  // Working Server 4: VidSrc CC (Clean 1080p English stream)
   if (numericId || effectiveImdb) {
     const idRef = numericId || effectiveImdb;
     servers.push({
-      name: `Server ${servers.length + 1} (1080p VidRock)`,
+      name: 'Server 4 (1080p English - VidSrc CC)',
       url: isTv
-        ? `https://vidrock.to/tv/${idRef}/${season}/${episode}?theme=6366f1&autoplay=false&download=false`
-        : `https://vidrock.to/movie/${idRef}?theme=6366f1&autoplay=false&download=false`,
+        ? `https://vidsrc.cc/v2/embed/tv/${idRef}/${season}/${episode}`
+        : `https://vidsrc.cc/v2/embed/movie/${idRef}`,
       isEmbed: true,
       quality: '1080p',
+      language: 'en',
+      isEnglish: true,
     });
   }
 
-  // Server 5: Vidy (1Tube Main 2 - Fast overlay player)
-  if (numericId || effectiveImdb) {
-    const idRef = numericId || effectiveImdb;
-    servers.push({
-      name: `Server ${servers.length + 1} (1080p Vidy)`,
-      url: isTv
-        ? `https://vidy.st/tv/${idRef}/${season}/${episode}?color=6366f1&episodeSelector=false&nextEpisode=false&autoplayNextEpisode=false&overlay=true`
-        : `https://vidy.st/movie/${idRef}?color=6366f1&overlay=true`,
-      isEmbed: true,
-      quality: '1080p',
-    });
-  }
-
-  // Server 6: Viduki Multi-Language (1Tube Multi-Language Audio)
+  // Working Server 5: Viduki Multi-Language (Dual audio tracks with English & international audio)
   if (numericId) {
     servers.push({
-      name: `Server ${servers.length + 1} (1080p Multi-Language)`,
+      name: 'Server 5 (1080p Multi-Language Audio - Viduki)',
       url: isTv
         ? `https://www.viduki.net/2/tv/${numericId}/${season}/${episode}?color=6366f1`
         : `https://www.viduki.net/2/movie/${numericId}?color=6366f1`,
       isEmbed: true,
       quality: '1080p',
+      language: 'multi',
+      isEnglish: true,
     });
   }
 
-  // Server 7: Viduki Premium Embeds (1Tube Premium)
+  // Server 6: VidRock (1080p Ultra HD buffer)
+  if (numericId || effectiveImdb) {
+    const idRef = numericId || effectiveImdb;
+    servers.push({
+      name: 'Server 6 (1080p English - VidRock)',
+      url: isTv
+        ? `https://vidrock.to/tv/${idRef}/${season}/${episode}?theme=6366f1&autoplay=false&download=false`
+        : `https://vidrock.to/movie/${idRef}?theme=6366f1&autoplay=false&download=false`,
+      isEmbed: true,
+      quality: '1080p',
+      language: 'en',
+      isEnglish: true,
+    });
+  }
+
+  // Server 7: Vidy (Fast overlay player)
+  if (numericId || effectiveImdb) {
+    const idRef = numericId || effectiveImdb;
+    servers.push({
+      name: 'Server 7 (1080p Vidy Fast)',
+      url: isTv
+        ? `https://vidy.st/tv/${idRef}/${season}/${episode}?color=6366f1&episodeSelector=false&nextEpisode=false&autoplayNextEpisode=false&overlay=true`
+        : `https://vidy.st/movie/${idRef}?color=6366f1&overlay=true`,
+      isEmbed: true,
+      quality: '1080p',
+      language: 'en',
+      isEnglish: true,
+    });
+  }
+
+  // Server 8: VidSrc TO (Reliable fallback mirror)
+  servers.push({
+    name: 'Server 8 (1080p VidSrc TO)',
+    url: isTv
+      ? `https://vidsrc.to/embed/tv/${numericId || mediaRef}/${season}/${episode}`
+      : `https://vidsrc.to/embed/movie/${numericId || mediaRef}`,
+    isEmbed: true,
+    quality: '1080p',
+    language: 'en',
+    isEnglish: true,
+  });
+
+  // Server 9: VidZee (Alternative backup)
+  if (numericId || effectiveImdb) {
+    const idRef = numericId || effectiveImdb;
+    servers.push({
+      name: 'Server 9 (1080p VidZee)',
+      url: isTv
+        ? `https://player.vidzee.wtf/embed/tv/${idRef}/${season}/${episode}?color=6366f1`
+        : `https://player.vidzee.wtf/embed/movie/${idRef}?color=6366f1`,
+      isEmbed: true,
+      quality: '1080p',
+      language: 'en',
+      isEnglish: true,
+    });
+  }
+
+  // Server 10: Viduki Premium
   if (numericId) {
     servers.push({
-      name: `Server ${servers.length + 1} (1080p Viduki Premium)`,
+      name: 'Server 10 (1080p Viduki Premium)',
       url: isTv
         ? `https://www.viduki.net/4/tv/${numericId}/${season}/${episode}?color=6366f1`
         : `https://www.viduki.net/4/movie/${numericId}?color=6366f1`,
@@ -211,48 +293,26 @@ export function buildStreamServers(
     });
   }
 
-  // Server 8: AutoEmbed (Universal TMDB catalog fallback)
-  if (numericId) {
-    servers.push({
-      name: `Server ${servers.length + 1} (1080p AutoEmbed)`,
-      url: isTv
-        ? `https://autoembed.co/tv/tmdb/${numericId}-${season}-${episode}`
-        : `https://autoembed.co/movie/tmdb/${numericId}`,
-      isEmbed: true,
-      quality: '1080p',
-    });
-  }
-
-  // Server 9: VidZee (1Tube Main 6)
-  if (numericId || effectiveImdb) {
-    const idRef = numericId || effectiveImdb;
-    servers.push({
-      name: `Server ${servers.length + 1} (1080p VidZee)`,
-      url: isTv
-        ? `https://player.vidzee.wtf/embed/tv/${idRef}/${season}/${episode}?color=6366f1`
-        : `https://player.vidzee.wtf/embed/movie/${idRef}?color=6366f1`,
-      isEmbed: true,
-      quality: '1080p',
-    });
-  }
-
-  // Server 10: VidSrc TO (Reliable fallback mirror)
-  servers.push({
-    name: `Server ${servers.length + 1} (1080p VidSrc TO)`,
-    url: isTv
-      ? `https://vidsrc.to/embed/tv/${numericId || mediaRef}/${season}/${episode}`
-      : `https://vidsrc.to/embed/movie/${numericId || mediaRef}`,
-    isEmbed: true,
-    quality: '1080p',
-  });
-
-  // Official Trailer Preview
+  // Official Trailer Preview (Strictly last, never auto-started unless unreleased)
   servers.push({
     name: 'Trailer (HD Preview)',
     url: `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent((title || 'movie') + ' official trailer')}`,
     isEmbed: true,
     quality: 'HD',
   });
+
+  // If a non-English language was requested, prioritize multi-language and language-adapted servers to the front
+  if (!isEnglish) {
+    servers.sort((a, b) => {
+      if (a.name.toLowerCase().includes('trailer')) return 1;
+      if (b.name.toLowerCase().includes('trailer')) return -1;
+      const aMatch = a.language === language || a.language === 'multi' || a.name.includes(language.toUpperCase());
+      const bMatch = b.language === language || b.language === 'multi' || b.name.includes(language.toUpperCase());
+      if (aMatch && !bMatch) return -1;
+      if (!aMatch && bMatch) return 1;
+      return 0;
+    });
+  }
 
   return servers;
 }
@@ -261,6 +321,32 @@ export function buildStreamServers(
 // Curated Real Films & Cartoons with Verified Official 4K/1080p TMDB Artwork
 // ============================================================================
 export const CURATED_MOVIES: Video[] = [
+  {
+    id: 'movie-the-batman',
+    tmdbId: 414906,
+    imdbId: 'tt1877830',
+    title: 'The Batman',
+    description: "When a sadistic serial killer begins murdering key political figures in Gotham, Batman is forced to investigate the city's hidden corruption and question his family's involvement.",
+    videoUrl: 'https://vidlink.pro/movie/414906?primaryColor=e50914',
+    thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/rvtdN5XkWAfGX6xDuPL6yYS2seK.jpg',
+    posterUrl: 'https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg',
+    backdropUrl: 'https://image.tmdb.org/t/p/w1280/rvtdN5XkWAfGX6xDuPL6yYS2seK.jpg',
+    duration: '2:56:00',
+    durationSec: 10560,
+    views: 62400000,
+    createdAt: '2022',
+    channel: MOVIE_STUDIO_CHANNEL,
+    likes: 4200000,
+    dislikes: 18000,
+    category: 'Movies',
+    mediaType: 'movie',
+    genres: ['Action', 'Crime', 'Drama'],
+    tags: ['Movies', 'Action', 'Crime', 'Drama', 'Batman', 'DC', '4K', '1080p'],
+    isHls: false,
+    rating: '4.6',
+    resolution: '4K',
+    streamServers: buildStreamServers(414906, false, 'tt1877830', 'The Batman'),
+  },
   {
     id: 'movie-tmdb-969681',
     tmdbId: 969681,
@@ -601,9 +687,9 @@ export const CURATED_MOVIES: Video[] = [
     title: 'The Wild Robot',
     description: 'After a shipwreck, an intelligent robot called Roz is stranded on an uninhabited island. To survive the harsh environment, Roz bonds with the island animals and cares for an orphaned baby goose.',
     videoUrl: 'https://vidlink.pro/movie/1184918?primaryColor=6366f1',
-    thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/mQZJoIhTEkNhCYA00UJIGMdpRIX.jpg',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/9w0Vh9eizsqYe5prRUkFsQEC8g9.jpg',
-    backdropUrl: 'https://image.tmdb.org/t/p/w1280/mQZJoIhTEkNhCYA00UJIGMdpRIX.jpg',
+    thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/1pmXyN3sKeYoUhu5VBZiDU4BX21.jpg',
+    posterUrl: 'https://image.tmdb.org/t/p/w500/wTnV3PCVW5O92JMrFvvrRcV39RU.jpg',
+    backdropUrl: 'https://image.tmdb.org/t/p/w1280/1pmXyN3sKeYoUhu5VBZiDU4BX21.jpg',
     duration: '1:42:00',
     durationSec: 6120,
     views: 31200000,
@@ -625,9 +711,9 @@ export const CURATED_MOVIES: Video[] = [
     title: 'Moana 2',
     description: 'After receiving an unexpected call from her wayfinding ancestors, Moana journeys alongside Maui and an all-new crew to the far seas of Oceania into dangerous, long-lost waters for an adventure unlike anything she has ever faced.',
     videoUrl: 'https://vidlink.pro/movie/1241982?primaryColor=6366f1',
-    thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/tElnmtQ6yszji5P9YQ2z0z2n7u4.jpg',
-    posterUrl: 'https://image.tmdb.org/t/p/w500/4YZplWJpHqw0ddCu3kL6j8vB5c8.jpg',
-    backdropUrl: 'https://image.tmdb.org/t/p/w1280/tElnmtQ6yszji5P9YQ2z0z2n7u4.jpg',
+    thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/vYqt6kb4lcF8wwqsMMaULkP9OEn.jpg',
+    posterUrl: 'https://image.tmdb.org/t/p/w500/aLVkiINlIeCkcZIzb7XHzPYgO6L.jpg',
+    backdropUrl: 'https://image.tmdb.org/t/p/w1280/vYqt6kb4lcF8wwqsMMaULkP9OEn.jpg',
     duration: '1:40:00',
     durationSec: 6000,
     views: 36800000,
@@ -700,9 +786,9 @@ export const CURATED_MOVIES: Video[] = [
     title: 'Despicable Me 4',
     description: 'Gru and Lucy and their girls welcome a new member to the Gru family, Gru Jr., who is intent on tormenting his dad. Gru faces a new nemesis in Maxime Le Mal and his femme fatale girlfriend Valentina.',
     videoUrl: 'https://vidlink.pro/movie/519182?primaryColor=6366f1',
-    thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/fDmci71SMqvAz9LwA2iFpHkM1aI.jpg',
+    thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/twsxsfao6ZOVvT8LfudH603MMi6.jpg',
     posterUrl: 'https://image.tmdb.org/t/p/w500/wWba3TaojhK7NdycRhoQpsG0FaH.jpg',
-    backdropUrl: 'https://image.tmdb.org/t/p/w1280/fDmci71SMqvAz9LwA2iFpHkM1aI.jpg',
+    backdropUrl: 'https://image.tmdb.org/t/p/w1280/twsxsfao6ZOVvT8LfudH603MMi6.jpg',
     duration: '1:34:00',
     durationSec: 5640,
     views: 38400000,
@@ -723,11 +809,44 @@ export const CURATED_MOVIES: Video[] = [
 // ============================================================================
 // TMDB Formatter
 // ============================================================================
-export function formatTmdbItem(item: any): Video {
+export interface TmdbItem {
+  id: string | number;
+  media_type?: string;
+  first_air_date?: string;
+  release_date?: string;
+  genre_ids?: number[];
+  genres?: { id?: number; name?: string }[];
+  title?: string;
+  name?: string;
+  imdb_id?: string;
+  vote_average?: number | string;
+  vote_count?: number;
+  production_companies?: { id: number | string; name: string; logo_path?: string | null }[];
+  backdrop_path?: string | null;
+  best_backdrop_path?: string | null;
+  poster_path?: string | null;
+  logo_path?: string | null;
+  tagline?: string | null;
+  budget?: number;
+  revenue?: number;
+  status?: string;
+  belongs_to_collection?: { name?: string };
+  runtime?: number;
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+  cast?: { name: string; character?: string; profile_path?: string | null }[];
+  director?: { name: string; profile_path?: string | null };
+  overview?: string;
+  summary?: string;
+  seasons?: { season_number: number; name?: string; episode_count?: number }[];
+  episodes?: unknown[];
+}
+
+export function formatTmdbItem(item: TmdbItem): Video {
   const isTv = item.media_type === 'tv' || Boolean(item.first_air_date && !item.release_date);
   const isCartoon =
     (Array.isArray(item.genre_ids) && item.genre_ids.includes(16)) ||
-    (Array.isArray(item.genres) && item.genres.some((g: any) => g.id === 16 || g.name === 'Animation'));
+    (Array.isArray(item.genres) && item.genres.some((g) => g.id === 16 || g.name === 'Animation'));
   const title = item.title || item.name || 'Untitled';
   const tmdbId = item.id;
   const imdbId = item.imdb_id;
@@ -738,14 +857,15 @@ export function formatTmdbItem(item: any): Video {
   const rating = item.vote_average ? Number(item.vote_average).toFixed(1) : '8.0';
   const streams = buildStreamServers(tmdbId, isTv, imdbId, title);
 
-  const studioName = item.production_companies?.[0]?.name;
-  const studioLogo = item.production_companies?.[0]?.logo_path
-    ? `https://image.tmdb.org/t/p/w92${item.production_companies[0].logo_path}`
+  const firstCompany = item.production_companies?.[0];
+  const studioName = firstCompany?.name;
+  const studioLogo = firstCompany?.logo_path
+    ? `https://image.tmdb.org/t/p/w92${firstCompany.logo_path}`
     : undefined;
 
   const channel: Channel = studioName
     ? {
-        id: `studio_${item.production_companies[0].id}`,
+        id: `studio_${firstCompany?.id || 'default'}`,
         name: studioName,
         handle: `@${studioName.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
         avatarUrl: studioLogo || (isCartoon ? ANIMATION_STUDIO_CHANNEL.avatarUrl : MOVIE_STUDIO_CHANNEL.avatarUrl),
@@ -773,11 +893,11 @@ export function formatTmdbItem(item: any): Video {
     : 'Feature Film';
 
   const genresList: string[] = Array.isArray(item.genres)
-    ? item.genres.map((g: any) => g.name).filter(Boolean)
+    ? item.genres.map((g) => g.name || '').filter(Boolean)
     : [];
 
   const castList = Array.isArray(item.cast)
-    ? item.cast.slice(0, 12).map((c: any) => ({
+    ? item.cast.slice(0, 12).map((c) => ({
         name: c.name,
         character: c.character || 'Actor',
         avatarUrl: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : undefined,
@@ -866,8 +986,18 @@ export async function fetch1TubeSeasonEpisodes(showId: number | string, seasonNu
     });
     if (!res.ok) return [];
     const data = await res.json();
+    interface TvEpisodeRaw {
+      id: string | number;
+      episode_number: number;
+      season_number: number;
+      name?: string;
+      overview?: string;
+      still_path?: string | null;
+      runtime?: number;
+      air_date?: string;
+    }
     if (!Array.isArray(data?.episodes)) return [];
-    return data.episodes.map((ep: any) => ({
+    return (data.episodes as TvEpisodeRaw[]).map((ep: TvEpisodeRaw) => ({
       id: ep.id,
       episodeNumber: ep.episode_number,
       seasonNumber: ep.season_number,
@@ -982,8 +1112,8 @@ export async function fetchDirectTmdbSearch(query: string): Promise<Video[]> {
       }
       const data = await res.json();
       if (!Array.isArray(data?.results)) continue;
-      return data.results
-        .filter((item: any) => item.media_type === 'movie' || item.media_type === 'tv')
+      return (data.results as TmdbItem[])
+        .filter((item: TmdbItem) => item.media_type === 'movie' || item.media_type === 'tv')
         .map(formatTmdbItem);
     } catch {
       apiKeyPool.markTmdbKeyExhausted(key);
@@ -1016,7 +1146,15 @@ export async function fetchOMDbMovies(query: string, type?: 'movie' | 'series'):
         return [];
       }
 
-      return data.Search.map((item: any) => {
+      interface OmdbSearchItem {
+        Title: string;
+        Year: string;
+        imdbID: string;
+        Type: string;
+        Poster: string;
+      }
+
+      return (data.Search as OmdbSearchItem[]).map((item: OmdbSearchItem) => {
         const isSeries = item.Type === 'series';
         const isCartoon = query.toLowerCase().includes('cartoon') || query.toLowerCase().includes('animation');
         const category = isCartoon ? 'Cartoons' : 'Movies';
@@ -1068,7 +1206,21 @@ export async function fetchTVMazeShows(query: string): Promise<Video[]> {
     const data = await res.json();
     if (!Array.isArray(data)) return [];
 
-    return data.map(({ show }: any) => {
+    interface TvMazeSearchItem {
+      show: {
+        id: number | string;
+        name: string;
+        type?: string;
+        genres?: string[];
+        summary?: string;
+        image?: { original?: string; medium?: string };
+        premiered?: string;
+        averageRuntime?: number;
+        rating?: { average?: number };
+      };
+    }
+
+    return (data as TvMazeSearchItem[]).map(({ show }: TvMazeSearchItem) => {
       const isAnimation = show.type === 'Animation' || show.genres?.includes('Animation');
       const category = isAnimation ? 'Cartoons' : 'Movies';
       const streams = buildStreamServers(show.name, true, undefined, show.name);

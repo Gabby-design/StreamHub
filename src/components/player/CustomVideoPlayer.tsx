@@ -21,7 +21,18 @@ import {
   Film,
   FastForward,
   Rewind,
+  Globe,
 } from 'lucide-react';
+
+const PLAYBACK_LANGUAGES = [
+  { code: 'en', label: 'English' },
+  { code: 'es', label: 'Spanish' },
+  { code: 'fr', label: 'French' },
+  { code: 'de', label: 'German' },
+  { code: 'it', label: 'Italian' },
+  { code: 'pt', label: 'Portuguese' },
+  { code: 'ja', label: 'Japanese' },
+];
 
 interface StreamServerOption {
   name: string;
@@ -41,6 +52,8 @@ interface CustomVideoPlayerProps {
   title?: string;
   resolution?: string;
   isUpcoming?: boolean;
+  currentLanguage?: string;
+  onLanguageChange?: (lang: string) => void;
 }
 
 interface QualityLevel {
@@ -60,6 +73,8 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   title = 'Video Player',
   resolution,
   isUpcoming = false,
+  currentLanguage = 'en',
+  onLanguageChange,
 }) => {
   const [isMounted, setIsMounted] = useState(false);
 
@@ -91,11 +106,15 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   const [activeSrc, setActiveSrc] = useState(src);
 
   useEffect(() => {
-    setIsMounted(true);
+    queueMicrotask(() => {
+      setIsMounted(true);
+    });
   }, []);
 
   useEffect(() => {
-    setActiveSrc(getInitialSrc());
+    queueMicrotask(() => {
+      setActiveSrc(getInitialSrc());
+    });
   }, [getInitialSrc]);
 
   // Shield state: Absorbs first ad-trigger click & neutralizes popups
@@ -104,9 +123,11 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   const [directTouchMode, setDirectTouchMode] = useState(true);
 
   useEffect(() => {
-    setAbsorbClick(true);
-    setDirectTouchMode(true);
-    setIsSandboxed(false);
+    queueMicrotask(() => {
+      setAbsorbClick(true);
+      setDirectTouchMode(true);
+      setIsSandboxed(false);
+    });
   }, [activeSrc]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -150,7 +171,9 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   const [hasVideoError, setHasVideoError] = useState(false);
 
   useEffect(() => {
-    setHasVideoError(false);
+    queueMicrotask(() => {
+      setHasVideoError(false);
+    });
   }, [activeSrc]);
 
   const activeServer = streamServers?.find((s) => s.url === activeSrc);
@@ -270,14 +293,14 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   // Initialize Video & HLS
   useEffect(() => {
     if (isEmbed) {
-      setIsLoading(false);
+      queueMicrotask(() => setIsLoading(false));
       return;
     }
 
     const video = videoRef.current;
     if (!video) return;
 
-    setIsLoading(true);
+    queueMicrotask(() => setIsLoading(true));
 
     if (hlsRef.current) {
       hlsRef.current.destroy();
@@ -747,6 +770,23 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
             <Server className="h-3.5 w-3.5 text-indigo-400" />
             Servers:
           </span>
+          {onLanguageChange && (
+            <div className="flex items-center gap-1 flex-shrink-0 mr-2">
+              <Globe className="h-3 w-3 text-indigo-400" />
+              <select
+                value={currentLanguage || 'en'}
+                onChange={(e) => onLanguageChange(e.target.value)}
+                className="bg-black/60 border border-white/10 rounded-md px-1.5 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                aria-label="Playback Audio Language"
+              >
+                {PLAYBACK_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code} className="bg-[#11131a] text-white">
+                    {lang.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           {streamServers.map((srv, idx) => {
             const isSelected = activeSrc === srv.url;
             const isTrailerSrv = srv.name.toLowerCase().includes('trailer');

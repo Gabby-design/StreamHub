@@ -1,8 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { Video, Channel, Comment, UserProfile } from '@/types';
-import { MOCK_VIDEOS, MOCK_CHANNELS, MOCK_COMMENTS } from '@/lib/mockData';
+import { Video, Comment, UserProfile } from '@/types';
+import { MOCK_VIDEOS, MOCK_COMMENTS } from '@/lib/mockData';
 import { CURATED_MOVIES } from '@/lib/movieApi';
 
 interface AppContextType {
@@ -114,11 +114,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Hydrate local storage on mount
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('streamhub_user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
+    queueMicrotask(() => {
+      try {
+        const storedUser = localStorage.getItem('streamhub_user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
 
       const storedHistory = localStorage.getItem('streamhub_history');
       if (storedHistory) setWatchHistory(JSON.parse(storedHistory));
@@ -149,6 +150,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       // Local storage unparsed or disabled
     }
+    });
 
     // Unregister any stale service workers from localhost development
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {

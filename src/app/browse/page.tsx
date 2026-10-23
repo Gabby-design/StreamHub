@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
+import { Video } from '@/types';
 import {
   Search,
   Sparkles,
@@ -56,12 +57,12 @@ export default function BrowsePage() {
 
   useEffect(() => {
     let isCancelled = false;
-    setIsLoading(true);
+    queueMicrotask(() => {
+      setIsLoading(true);
+    });
 
     const loadData = async () => {
       try {
-        const results: UnifiedMediaItem[] = [];
-
         // 1. Fetch Anime from /api/anime
         const shouldFetchAnime = selectedType === 'all' || selectedType === 'anime';
         // 2. Fetch Movies from /api/movies
@@ -69,7 +70,7 @@ export default function BrowsePage() {
         // 3. Fetch Cartoons from /api/movies
         const shouldFetchCartoons = selectedType === 'all' || selectedType === 'cartoon';
 
-        const promises: Promise<any>[] = [];
+        const promises: Promise<UnifiedMediaItem[]>[] = [];
 
         if (shouldFetchAnime) {
           const animeQuery = searchQuery.trim() ? `q=${encodeURIComponent(searchQuery.trim())}` : 'limit=18';
@@ -79,7 +80,7 @@ export default function BrowsePage() {
               .then((data) => {
                 if (data.videos) {
                   addDiscoveredVideos(data.videos);
-                  return data.videos.map((v: any) => ({
+                  return data.videos.map((v: Video) => ({
                     id: v.id,
                     title: v.title.replace(' (English Sub/Dub)', ''),
                     posterUrl: v.thumbnailUrl,
@@ -107,8 +108,8 @@ export default function BrowsePage() {
                 if (data.videos) {
                   addDiscoveredVideos(data.videos);
                   return data.videos
-                    .filter((v: any) => v.category === 'Movies')
-                    .map((v: any) => ({
+                    .filter((v: Video) => v.category === 'Movies')
+                    .map((v: Video) => ({
                       id: v.id,
                       title: v.title,
                       posterUrl: v.thumbnailUrl,
@@ -136,8 +137,8 @@ export default function BrowsePage() {
                 if (data.videos) {
                   addDiscoveredVideos(data.videos);
                   return data.videos
-                    .filter((v: any) => v.category === 'Cartoons')
-                    .map((v: any) => ({
+                    .filter((v: Video) => v.category === 'Cartoons')
+                    .map((v: Video) => ({
                       id: v.id,
                       title: v.title,
                       posterUrl: v.thumbnailUrl,
@@ -228,11 +229,11 @@ export default function BrowsePage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setSelectedType(tab.id as any)}
+                onClick={() => setSelectedType(tab.id as 'all' | 'movie' | 'anime' | 'cartoon')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
                   isSelected
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                    : 'bg-[#11131a] text-slate-400 hover:text-white hover:bg-white/5 border border-white/5'
+                    ? 'bg-[#E50914] text-white shadow-lg shadow-red-900/40'
+                    : 'bg-white/[0.04] text-zinc-400 hover:text-white hover:bg-white/[0.08] border border-white/5'
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -251,7 +252,7 @@ export default function BrowsePage() {
               className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition ${
                 selectedGenre === genre
                   ? 'bg-white/20 text-white font-semibold'
-                  : 'bg-white/5 text-slate-400 hover:text-slate-200 hover:bg-white/10 border border-white/5'
+                  : 'bg-white/[0.04] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.08] border border-white/5'
               }`}
             >
               {genre}
@@ -263,8 +264,8 @@ export default function BrowsePage() {
       {/* Media Grid */}
       {isLoading ? (
         <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3">
-          <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
-          <p className="text-xs text-slate-400">Loading catalog from global media servers...</p>
+          <Loader2 className="h-8 w-8 text-[#E50914] animate-spin" />
+          <p className="text-xs text-zinc-400">Loading catalog from global media servers...</p>
         </div>
       ) : filteredItems.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
@@ -272,10 +273,10 @@ export default function BrowsePage() {
             <Link
               key={item.id}
               href={item.watchUrl}
-              className="group flex flex-col rounded-2xl bg-[#11131a]/60 hover:bg-[#141722] border border-white/5 hover:border-indigo-500/40 p-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-950/20"
+              className="group flex flex-col rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-[#E50914]/40 p-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/70"
             >
               {/* Poster Card */}
-              <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-slate-900">
+              <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-zinc-900">
                 <img
                   src={item.posterUrl}
                   alt={item.title}
@@ -298,7 +299,7 @@ export default function BrowsePage() {
                         ? 'bg-purple-600/90'
                         : item.type === 'cartoon'
                         ? 'bg-emerald-600/90'
-                        : 'bg-indigo-600/90'
+                        : 'bg-[#E50914]/90'
                     }`}
                   >
                     {item.type}
@@ -311,7 +312,7 @@ export default function BrowsePage() {
                 {/* Audio or Format Badge */}
                 {item.badge && (
                   <div className="absolute bottom-2 left-2">
-                    <span className="rounded bg-black/80 backdrop-blur-sm px-1.5 py-0.5 text-[9px] font-bold text-slate-200 uppercase tracking-wider border border-white/10">
+                    <span className="rounded bg-black/80 backdrop-blur-sm px-1.5 py-0.5 text-[9px] font-bold text-zinc-200 uppercase tracking-wider border border-white/10">
                       {item.badge}
                     </span>
                   </div>
@@ -319,7 +320,7 @@ export default function BrowsePage() {
 
                 {/* Play Hover Overlay */}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <div className="h-10 w-10 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                  <div className="h-10 w-10 rounded-full bg-[#E50914] text-white flex items-center justify-center shadow-lg shadow-red-950/60 transform scale-75 group-hover:scale-100 transition-transform">
                     <Play className="h-4 w-4 ml-0.5 fill-current" />
                   </div>
                 </div>

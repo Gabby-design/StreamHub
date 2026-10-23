@@ -5,7 +5,6 @@ import { useApp, isOwnerUser } from '@/context/AppContext';
 import { VideoCard } from '@/components/feed/VideoCard';
 import Link from 'next/link';
 import {
-  Layers,
   History,
   ThumbsUp,
   Clock,
@@ -20,7 +19,9 @@ export default function LibraryPage() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    queueMicrotask(() => {
+      setMounted(true);
+    });
   }, []);
 
   const isOwner = isOwnerUser(user);

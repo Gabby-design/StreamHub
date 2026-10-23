@@ -3,8 +3,6 @@ import { config } from '@/lib/config';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
-
     // 1. Mux Direct Upload Integration
     if (config.mux.isConfigured) {
       const basicAuth = Buffer.from(
@@ -75,8 +73,9 @@ export async function POST(req: NextRequest) {
       uploadUrl: '/api/upload/mock-sink',
       message: 'Mock upload target active. Configure Mux or Cloudflare keys in .env.local to route to live transcoding target.',
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -106,9 +105,10 @@ export async function DELETE(req: NextRequest) {
       message: 'Uploaded movie asset deleted from server',
       id,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to remove asset';
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to remove asset' },
+      { success: false, error: message },
       { status: 500 }
     );
   }

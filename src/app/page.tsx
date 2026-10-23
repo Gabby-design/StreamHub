@@ -3,10 +3,11 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { CategoryPills } from '@/components/feed/CategoryPills';
+import { HeroBillboard } from '@/components/feed/HeroBillboard';
 import { VideoGrid } from '@/components/feed/VideoGrid';
+import { PricingSection } from '@/components/feed/PricingSection';
 import { Video } from '@/types';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -15,7 +16,7 @@ function HomeContent() {
   const [onlineVideos, setOnlineVideos] = useState<Video[]>([]);
   const [isSearchingOnline, setIsSearchingOnline] = useState(false);
 
-  // Clean home screen on manual browser reload; sync urlSearch only on direct external deep links
+  // Clean home screen on manual reload; sync urlSearch on direct external deep links
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const navEntry =
@@ -34,7 +35,7 @@ function HomeContent() {
     }
   }, [urlSearch, setSearchQuery]);
 
-  // Dynamic online catalog search across anime, movies, and cartoons
+  // Dynamic online catalog search across movies, anime, cartoons
   useEffect(() => {
     let isCancelled = false;
 
@@ -59,7 +60,6 @@ function HomeContent() {
         const fetched: Video[] = [];
 
         if (hasSearch) {
-          // Query both movie and anime APIs in parallel
           const [movieRes, animeRes] = await Promise.all([
             fetch(`/api/movies?q=${encodeURIComponent(cleanQ)}`)
               .then((r) => r.json())
@@ -95,7 +95,7 @@ function HomeContent() {
           addDiscoveredVideos(fetched);
         }
       } catch {
-        // Fallback to local catalog
+        // Fallback
       } finally {
         if (!isCancelled) setIsSearchingOnline(false);
       }
@@ -108,7 +108,7 @@ function HomeContent() {
     };
   }, [selectedCategory, searchQuery, addDiscoveredVideos]);
 
-  // Combine local videos with live online videos, prioritizing online search results
+  // Merge local and live catalog
   const allVideos = React.useMemo(() => {
     if (searchQuery.trim()) {
       const onlineIds = new Set(onlineVideos.map((v) => v.id));
@@ -120,7 +120,7 @@ function HomeContent() {
     return [...videos, ...uniqueOnline];
   }, [videos, onlineVideos, searchQuery]);
 
-  // Filter videos based on category and search query
+  // Filter based on active category & search query
   const filteredVideos = allVideos.filter((video) => {
     const hasSearch = Boolean(searchQuery.trim());
     const matchesCategory =
@@ -143,30 +143,32 @@ function HomeContent() {
   });
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)] w-full max-w-full overflow-x-hidden min-w-0">
-      {/* Category Filter Pills */}
-      <CategoryPills />
+    <div className="flex flex-col min-h-screen w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+      {/* 3. Hero Feature Section (Billboard) */}
+      {!searchQuery && <HeroBillboard />}
 
-      {/* Main Video Feed */}
-      <div className="p-3 sm:p-4 lg:p-6 flex-1 w-full max-w-full min-w-0">
-        {isSearchingOnline && (
-          <div className="flex items-center gap-2 mb-4 text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20 w-fit animate-pulse">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            <span>Scanning live global catalog (Movies, Cartoons & Anime)...</span>
-          </div>
-        )}
+      {/* Online Search Progress Feedback */}
+      {isSearchingOnline && (
+        <div className="flex items-center gap-2 text-xs font-semibold text-[#E50914] bg-[#E50914]/10 px-3.5 py-2 rounded-full border border-[#E50914]/25 w-fit animate-pulse">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <span>Scanning global catalog for &quot;{searchQuery}&quot;...</span>
+        </div>
+      )}
 
-        <VideoGrid
-          videos={filteredVideos}
-          title={
-            searchQuery
-              ? `Search Results for "${searchQuery}"`
-              : selectedCategory !== 'All'
-              ? `${selectedCategory} Streams`
-              : undefined
-          }
-        />
-      </div>
+      {/* 4. Recommendations & Card Grid */}
+      <VideoGrid
+        videos={filteredVideos}
+        title={
+          searchQuery
+            ? `Search Results for "${searchQuery}"`
+            : selectedCategory !== 'All'
+            ? `${selectedCategory} Recommendations`
+            : 'Recommendations'
+        }
+      />
+
+      {/* 5. Pricing / Subscription Section ("Choose your plan") */}
+      <PricingSection />
     </div>
   );
 }
@@ -176,7 +178,7 @@ export default function HomePage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-[50vh]">
-          <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
+          <Loader2 className="h-8 w-8 text-[#E50914] animate-spin" />
         </div>
       }
     >
@@ -184,4 +186,3 @@ export default function HomePage() {
     </Suspense>
   );
 }
-

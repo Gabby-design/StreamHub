@@ -36,14 +36,32 @@ export async function GET(req: NextRequest) {
       const data = await response.json();
       const animeList = data.data || [];
 
-      liveVideos = animeList
-        .filter((item: any) => item.attributes?.youtubeVideoId || item.attributes?.posterImage)
-      .map((item: any) => {
-        const attr = item.attributes;
+      interface KitsuAnimeItem {
+        id: string;
+        attributes?: {
+          youtubeVideoId?: string;
+          posterImage?: { large?: string; medium?: string; tiny?: string; small?: string };
+          coverImage?: { large?: string };
+          canonicalTitle?: string;
+          titles?: { en?: string; en_jp?: string };
+          ageRatingGuide?: string;
+          synopsis?: string;
+          episodeCount?: number;
+          userCount?: number;
+          favoritesCount?: number;
+          startDate?: string;
+          subtype?: string;
+          status?: string;
+        };
+      }
+
+      liveVideos = (animeList as KitsuAnimeItem[])
+        .filter((item: KitsuAnimeItem) => item.attributes?.youtubeVideoId || item.attributes?.posterImage)
+      .map((item: KitsuAnimeItem) => {
+        const attr = item.attributes || {};
         const ytId = attr.youtubeVideoId;
         const poster = attr.posterImage?.large || attr.posterImage?.medium || attr.coverImage?.large;
         const title = attr.canonicalTitle || attr.titles?.en || attr.titles?.en_jp || 'Anime Stream';
-        const studio = attr.ageRatingGuide || 'Animation Studio';
 
         const servers = buildStreamServers(title, true, undefined, title, 1, 1);
         const primaryUrl = servers[0]?.url || (ytId ? `https://www.youtube-nocookie.com/embed/${ytId}` : '');
@@ -84,7 +102,8 @@ export async function GET(req: NextRequest) {
     ];
 
     return NextResponse.json({ videos: combined });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Internal Error' }, { status: 500 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal Error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

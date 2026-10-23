@@ -8,12 +8,12 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
-  themeColor: '#090a0f',
+  themeColor: '#0b0b0c',
 };
 
 export const metadata: Metadata = {
-  title: 'StreamHub - Modern Video Streaming and Sharing Platform',
-  description: 'High-performance video streaming with HLS adaptive bitrate, interactive channels, and studio upload.',
+  title: 'filmbox - Modern Dark Streaming Dashboard',
+  description: 'High-performance cinema and series streaming dashboard with 4K HDR playback and personalized recommendations.',
 };
 
 export default function RootLayout({
@@ -48,7 +48,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased bg-[#090a0f] text-slate-100 selection:bg-indigo-500 selection:text-white">
+      <body className="antialiased bg-[#0b0b0c] text-zinc-100 selection:bg-[#E50914] selection:text-white">
         <AppProvider>
           <AppShell>{children}</AppShell>
         </AppProvider>

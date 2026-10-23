@@ -21,7 +21,7 @@ import {
 
 export default function UploadPage() {
   const router = useRouter();
-  const { user, addUploadedVideo, openAuthModal } = useApp();
+  const { user, addUploadedVideo } = useApp();
 
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -409,7 +409,7 @@ export default function UploadPage() {
                 </label>
                 <select
                   value={visibility}
-                  onChange={(e) => setVisibility(e.target.value as any)}
+                  onChange={(e) => setVisibility(e.target.value as 'Public' | 'Unlisted' | 'Private')}
                   className="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition"
                 >
                   <option value="Public" className="bg-[#11131a] text-white">Public (Searchable and listed)</option>
@@ -464,7 +464,7 @@ export default function UploadPage() {
             </button>
             <button
               type="submit"
-              disabled={!isCompleted || !title.trim()}
+              disabled={!isCompleted || isUploading || !title.trim()}
               className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed px-6 py-3 text-sm font-bold text-white shadow-xl shadow-indigo-600/20 transition"
             >
               <span>Publish Stream</span>

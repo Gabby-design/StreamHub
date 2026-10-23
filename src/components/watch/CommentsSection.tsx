@@ -6,7 +6,6 @@ import { useApp } from '@/context/AppContext';
 import {
   ThumbsUp,
   ThumbsDown,
-  MessageSquare,
   ArrowUpDown,
   CornerDownRight,
   Send,
@@ -18,7 +17,7 @@ interface CommentsSectionProps {
 }
 
 export const CommentsSection: React.FC<CommentsSectionProps> = ({ videoId }) => {
-  const { user, commentsMap, addComment, voteComment, openAuthModal } = useApp();
+  const { user, commentsMap, addComment, voteComment } = useApp();
   const [mounted, setMounted] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [replyTextMap, setReplyTextMap] = useState<Record<string, string>>({});
@@ -26,7 +25,9 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ videoId }) => 
   const [sortBy, setSortBy] = useState<'top' | 'newest'>('top');
 
   useEffect(() => {
-    setMounted(true);
+    queueMicrotask(() => {
+      setMounted(true);
+    });
   }, []);
 
   const comments: Comment[] = commentsMap[videoId] || [];

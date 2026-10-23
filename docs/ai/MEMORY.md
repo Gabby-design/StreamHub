@@ -21,7 +21,9 @@
 
 ## Features
 
-- Fully responsive layout across mobile phones (320px+), iPads/tablets (640-1024px), laptops, and desktop.
+- Fully responsive layout across mobile phones (320px+), iPads/tablets (640-1024px), laptops, and desktop with iOS home-indicator safe-area padding (`env(safe-area-inset-bottom)`).
+- Native mobile `navigator.share` sheet integration across sidebar and video card with clipboard fallback.
+- Horizontal scroll filter pill controls for compact screens.
 - Autocomplete dropdown with quick action "Search for '{inputVal}'" and prefix-sorted movie suggestions.
 - Recent Searches history shown on empty search input with delete and clear-all actions.
 - Clean "Sign In" button on all new devices; user profile and channel links available upon authentication.

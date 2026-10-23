@@ -3,7 +3,7 @@
 import React from 'react';
 import { useApp } from '@/context/AppContext';
 import { VideoGrid } from '@/components/feed/VideoGrid';
-import { ThumbsUp, Sparkles } from 'lucide-react';
+import { ThumbsUp } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LikedPage() {

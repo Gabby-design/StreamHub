@@ -6,17 +6,12 @@ import { MOCK_LIVE_CHAT } from '@/lib/mockData';
 import { CustomVideoPlayer } from '@/components/player/CustomVideoPlayer';
 import {
   Users,
-  Radio,
   Send,
   Heart,
   Share2,
-  Bookmark,
-  Sparkles,
-  Shield,
   MessageSquare,
-  Flame,
+  Sparkles,
   Check,
-  ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -28,8 +23,8 @@ interface LivePlayerWithChatProps {
 
 export const LivePlayerWithChat: React.FC<LivePlayerWithChatProps> = ({
   stream,
-  allStreams = [],
-  onSelectStream,
+  allStreams: _allStreams = [],
+  onSelectStream: _onSelectStream,
 }) => {
   const [messages, setMessages] = useState<LiveChatMessage[]>(MOCK_LIVE_CHAT);
   const [inputText, setInputText] = useState('');
@@ -45,7 +40,9 @@ export const LivePlayerWithChat: React.FC<LivePlayerWithChatProps> = ({
 
   // Fluctuating viewer count simulation for realism
   useEffect(() => {
-    setViewerCount(stream.liveViewers || 42890);
+    queueMicrotask(() => {
+      setViewerCount(stream.liveViewers || 42890);
+    });
     const interval = setInterval(() => {
       setViewerCount((prev) => {
         const delta = Math.floor(Math.random() * 25) - 12;
