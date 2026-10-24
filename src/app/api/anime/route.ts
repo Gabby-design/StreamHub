@@ -2,11 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Video } from '@/types';
 import { CURATED_MOVIES, buildStreamServers } from '@/lib/movieApi';
 
+const animeCache = new Map<string, { data: unknown; expires: number }>();
+const ANIME_CACHE_TTL_MS = 10 * 60 * 1000;
+
+const CACHE_HEADERS = {
+  'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+};
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('q');
     const limit = searchParams.get('limit') || '12';
+
+    const cacheKey = `anime:${query || ''}:${limit}`;
+    const cached = animeCache.get(cacheKey);
+    if (cached && cached.expires > Date.now()) {
+      return NextResponse.json(cached.data, { headers: CACHE_HEADERS });
+    }
 
     const cleanQ = (query || '').toLowerCase().trim();
     const curatedMatches: Video[] = CURATED_MOVIES.filter((m) => {
@@ -101,7 +114,13 @@ export async function GET(req: NextRequest) {
       ...liveVideos.filter((lv) => !curatedMatches.some((cm) => cm.id === lv.id)),
     ];
 
-    return NextResponse.json({ videos: combined });
+    const payload = { videos: combined };
+    if (animeCache.size > 200) {
+      const firstKey = animeCache.keys().next().value;
+      if (firstKey) animeCache.delete(firstKey);
+    }
+    animeCache.set(cacheKey, { data: payload, expires: Date.now() + ANIME_CACHE_TTL_MS });
+    return NextResponse.json(payload, { headers: CACHE_HEADERS });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal Error';
     return NextResponse.json({ error: message }, { status: 500 });

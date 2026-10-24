@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getLiveCatalog, fetch1TubeDetails, fetch1TubeSeasonEpisodes, CURATED_MOVIES } from '@/lib/movieApi';
 
+const apiCache = new Map<string, { data: unknown; expires: number }>();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+function getCached(key: string) {
+  const entry = apiCache.get(key);
+  if (entry && entry.expires > Date.now()) {
+    return entry.data;
+  }
+  if (entry) apiCache.delete(key);
+  return null;
+}
+
+function setCached(key: string, data: unknown) {
+  if (apiCache.size > 500) {
+    const firstKey = apiCache.keys().next().value;
+    if (firstKey) apiCache.delete(firstKey);
+  }
+  apiCache.set(key, { data, expires: Date.now() + CACHE_TTL_MS });
+}
+
+const CACHE_HEADERS = {
+  'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+};
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
@@ -9,13 +33,21 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get('category') || 'Movies';
   const type = (searchParams.get('type') || 'movie') as 'movie' | 'tv';
 
+  const cacheKey = `movies:${id || ''}:${season || ''}:${q || ''}:${category}:${type}`;
+  const cachedData = getCached(cacheKey);
+  if (cachedData) {
+    return NextResponse.json(cachedData, { headers: CACHE_HEADERS });
+  }
+
   try {
     if (id) {
       // 1. If season is requested, return episodes for that season
       if (season) {
         const seasonNum = parseInt(season, 10) || 1;
         const episodes = await fetch1TubeSeasonEpisodes(id, seasonNum);
-        return NextResponse.json({ success: true, episodes });
+        const payload = { success: true, episodes };
+        setCached(cacheKey, payload);
+        return NextResponse.json(payload, { headers: CACHE_HEADERS });
       }
 
       // 2. Check curated list first
@@ -32,13 +64,17 @@ export async function GET(request: NextRequest) {
         return false;
       });
       if (curated) {
-        return NextResponse.json({ success: true, video: curated });
+        const payload = { success: true, video: curated };
+        setCached(cacheKey, payload);
+        return NextResponse.json(payload, { headers: CACHE_HEADERS });
       }
 
       // 3. Query 1Tube details (supports TMDB IDs and IMDB tt IDs)
       const video = await fetch1TubeDetails(id, type);
       if (video) {
-        return NextResponse.json({ success: true, video });
+        const payload = { success: true, video };
+        setCached(cacheKey, payload);
+        return NextResponse.json(payload, { headers: CACHE_HEADERS });
       }
 
       return NextResponse.json(
@@ -48,11 +84,13 @@ export async function GET(request: NextRequest) {
     }
 
     const videos = await getLiveCatalog(category, q || undefined);
-    return NextResponse.json({
+    const payload = {
       success: true,
       count: videos.length,
       videos,
-    });
+    };
+    setCached(cacheKey, payload);
+    return NextResponse.json(payload, { headers: CACHE_HEADERS });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to fetch catalog';
     return NextResponse.json(

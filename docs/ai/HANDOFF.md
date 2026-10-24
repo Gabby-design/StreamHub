@@ -25,6 +25,7 @@ last_reviewed: "2026-10-20"
 11. Integrated quick "Next Working Server" failover button and tracking engine across [CustomVideoPlayer.tsx](file:///c:/Users/Olamide/Documents/StreamHub/src/components/player/CustomVideoPlayer.tsx) and [StreamPlayer.tsx](file:///c:/Users/Olamide/Documents/StreamHub/src/components/player/StreamPlayer.tsx).
 12. Successfully validated full production build (`npm run build`, exit code 0) across all 16 static and dynamic routes and lint verification (`npm run lint`, 0 errors).
 13. Restored corrupted [CustomVideoPlayer.tsx](file:///c:/Users/Olamide/Documents/StreamHub/src/components/player/CustomVideoPlayer.tsx), aligned `CustomVideoPlayerProps` with language selector props (`currentLanguage`, `onLanguageChange`), wrapped effect state setters in `queueMicrotask`, and verified 0 errors on `npm run lint` and `npm run build`.
+14. Accelerated streaming responsiveness and load speed: added DNS prefetch and preconnect hints for all embed CDN domains in [layout.tsx](file:///c:/Users/Olamide/Documents/StreamHub/src/app/layout.tsx), initialized player `activeSrc` lazily to eliminate iframe double-rendering, set `loading="eager"` on embed iframes, configured low-latency prefetch buffers in HLS.js, removed blocking `beforeunload` navigation listeners in [watch page](file:///c:/Users/Olamide/Documents/StreamHub/src/app/watch/[videoId]/page.tsx), and added in-memory TTL caching with HTTP Cache-Control headers across `/api/movies` and `/api/anime`.
 
 ## Git status
 

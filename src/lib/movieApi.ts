@@ -1045,10 +1045,12 @@ export async function fetch1TubeDetails(tmdbId: string | number, type: 'movie' |
       .replace('tv-', '');
     let res = await fetch(`https://www.1tube.org/api/details/${cleanId}?type=${type}`, {
       next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(3000),
     });
     if (!res.ok && type === 'movie') {
       res = await fetch(`https://www.1tube.org/api/details/${cleanId}?type=tv`, {
         next: { revalidate: 3600 },
+        signal: AbortSignal.timeout(3000),
       });
       if (res.ok) type = 'tv';
     }

@@ -103,7 +103,7 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     return src;
   }, [src, streamServers, isUpcomingTitle]);
 
-  const [activeSrc, setActiveSrc] = useState(src);
+  const [activeSrc, setActiveSrc] = useState(() => getInitialSrc());
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -112,8 +112,9 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   }, []);
 
   useEffect(() => {
+    const next = getInitialSrc();
     queueMicrotask(() => {
-      setActiveSrc(getInitialSrc());
+      setActiveSrc((prev) => (prev !== next ? next : prev));
     });
   }, [getInitialSrc]);
 
@@ -313,7 +314,12 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
-        backBufferLength: 90,
+        backBufferLength: 60,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        maxBufferSize: 60 * 1000 * 1000,
+        capLevelToPlayerSize: true,
+        startFragPrefetch: true,
       });
       hlsRef.current = hls;
 
@@ -876,6 +882,7 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
               src={cleanEmbedUrl}
               title={title || 'Video Player'}
               suppressHydrationWarning={true}
+              loading="eager"
               sandbox={isSandboxed ? 'allow-scripts allow-same-origin allow-forms allow-presentation' : undefined}
               allow="accelerometer *; autoplay *; clipboard-write *; encrypted-media *; fullscreen *; gyroscope *; picture-in-picture *; web-share *"
               referrerPolicy="strict-origin-when-cross-origin"
