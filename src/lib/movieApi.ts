@@ -171,8 +171,8 @@ export function buildStreamServers(
         ? 'Server 2 (1080p English - AutoEmbed Multi-Audio)'
         : `Server 2 (1080p Multi-Audio - AutoEmbed)`,
       url: isTv
-        ? `https://autoembed.co/tv/tmdb/${ref}-${season}-${episode}`
-        : `https://autoembed.co/movie/tmdb/${ref}`,
+        ? `https://autoembed.me/tv/tmdb/${ref}-${season}-${episode}`
+        : `https://autoembed.me/movie/tmdb/${ref}`,
       isEmbed: true,
       quality: '1080p',
       language: isEnglish ? 'en' : language,
@@ -404,7 +404,7 @@ export const CURATED_MOVIES: Video[] = [
     imdbId: 'tt22022452',
     title: 'Inside Out 2',
     description: 'Joy, Sadness, Anger, Fear and Disgust have been running a successful operation by all accounts. However, when Anxiety, Envy, Ennui and Embarrassment show up, the headquarters undergoes a sudden demolition.',
-    videoUrl: 'https://autoembed.co/movie/tmdb/1022789',
+    videoUrl: 'https://autoembed.me/movie/tmdb/1022789',
     thumbnailUrl: 'https://image.tmdb.org/t/p/w1280/hLuPF9HxtjbS7ZzSjMRG3RpUffp.jpg',
     posterUrl: 'https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/hLuPF9HxtjbS7ZzSjMRG3RpUffp.jpg',
