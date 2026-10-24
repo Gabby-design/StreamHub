@@ -18,9 +18,7 @@ import {
   Loader2,
   Server,
   AlertCircle,
-  Film,
   FastForward,
-  Rewind,
   Globe,
 } from 'lucide-react';
 
@@ -71,7 +69,7 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   onToggleTheater,
   streamServers,
   title = 'Video Player',
-  resolution,
+  resolution: _resolution,
   isUpcoming = false,
   currentLanguage = 'en',
   onLanguageChange,
@@ -118,15 +116,11 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     });
   }, [getInitialSrc]);
 
-  // Shield state: Absorbs first ad-trigger click & neutralizes popups
-  const [absorbClick, setAbsorbClick] = useState(true);
+  // Shield state: Neutralizes popups when enabled
   const [isSandboxed, setIsSandboxed] = useState(false);
-  const [directTouchMode, setDirectTouchMode] = useState(true);
 
   useEffect(() => {
     queueMicrotask(() => {
-      setAbsorbClick(true);
-      setDirectTouchMode(true);
       setIsSandboxed(false);
     });
   }, [activeSrc]);
@@ -689,135 +683,10 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  const activeResolution =
-    activeServer?.quality ||
-    (activeSrc.includes('1080')
-      ? '1080p'
-      : activeSrc.includes('720')
-      ? '720p'
-      : isHls
-      ? '4K'
-      : resolution || '1080p');
-
   const isCurrentTrailer =
     activeSrc.includes('youtube') ||
     activeServer?.name.toLowerCase().includes('trailer') ||
     activeServer?.quality === 'HD';
-
-  const handleResolutionSelect = (targetRes: '1080p' | '720p' | '4K') => {
-    if (streamServers && streamServers.length > 0) {
-      const match = streamServers.find(
-        (s) =>
-          (s.quality === targetRes || s.name.includes(targetRes)) &&
-          !s.name.toLowerCase().includes('trailer')
-      );
-      if (match) {
-        setActiveSrc(match.url);
-        return;
-      }
-    }
-    if (availableLevels.length > 0) {
-      const targetHeight = targetRes === '1080p' ? 1080 : targetRes === '720p' ? 720 : 2160;
-      const levelMatch = availableLevels.find((lvl) => lvl.height === targetHeight);
-      if (levelMatch) {
-        handleQualityChange(levelMatch.id);
-      }
-    }
-  };
-
-  const serverSelectorBar = (
-    <div className="mb-3 rounded-2xl bg-[#11131a]/85 border border-white/10 p-3 backdrop-blur-md shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-3">
-      {/* Live Stream Status & Current Resolution Indicator */}
-      <div className="flex items-center gap-2.5 flex-wrap">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-indigo-500/10 border border-emerald-500/30 text-xs shadow-inner">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-          </span>
-          <span className="font-extrabold text-emerald-400 uppercase tracking-wider">
-            {activeResolution} {activeResolution === '4K' ? 'Ultra HD' : 'Full HD'}
-          </span>
-          <span className="text-slate-500">•</span>
-          <span className="text-slate-200 font-medium truncate max-w-[160px] sm:max-w-xs">
-            {activeServer?.name || (isCurrentTrailer ? 'Official Preview' : 'Complete 1080p Master')}
-          </span>
-        </div>
-
-        {/* Quick Resolution Switcher Buttons (1080p / 720p / 4K) */}
-        <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
-          <span className="text-[10px] font-bold text-slate-400 uppercase px-1.5 tracking-wider">
-            Quality:
-          </span>
-          {(['1080p', '720p', '4K'] as const).map((res) => {
-            const isResActive = activeResolution === res;
-            return (
-              <button
-                key={res}
-                onClick={() => handleResolutionSelect(res)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
-                  isResActive
-                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/40 ring-1 ring-white/20'
-                    : 'text-slate-400 hover:text-white hover:bg-white/10'
-                }`}
-                title={`Switch playback to ${res}`}
-              >
-                {res}
-                {isResActive && <Check className="h-3 w-3" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Stream Servers Carousel (Full Streams & Trailer) */}
-      {streamServers && streamServers.length > 0 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5 flex-shrink-0 mr-1">
-            <Server className="h-3.5 w-3.5 text-indigo-400" />
-            Servers:
-          </span>
-          {onLanguageChange && (
-            <div className="flex items-center gap-1 flex-shrink-0 mr-2">
-              <Globe className="h-3 w-3 text-indigo-400" />
-              <select
-                value={currentLanguage || 'en'}
-                onChange={(e) => onLanguageChange(e.target.value)}
-                className="bg-black/60 border border-white/10 rounded-md px-1.5 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                aria-label="Playback Audio Language"
-              >
-                {PLAYBACK_LANGUAGES.map((lang) => (
-                  <option key={lang.code} value={lang.code} className="bg-[#11131a] text-white">
-                    {lang.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          {streamServers.map((srv, idx) => {
-            const isSelected = activeSrc === srv.url;
-            const isTrailerSrv = srv.name.toLowerCase().includes('trailer');
-
-            return (
-              <button
-                key={idx}
-                onClick={() => setActiveSrc(srv.url)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition flex-shrink-0 flex items-center gap-1.5 ${
-                  isSelected
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/40 ring-1 ring-white/20'
-                    : isTrailerSrv
-                    ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20'
-                    : 'bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/5'
-                }`}
-              >
-                <span>{srv.name}</span>
-                {isSelected && <Check className="h-3 w-3 text-white" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
 
   const upcomingBanner = isUpcomingTitle && (
     <div className="mb-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-indigo-500/10 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-200 shadow-xl">
@@ -846,7 +715,6 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     return (
       <div className="w-full">
         {upcomingBanner}
-        {serverSelectorBar}
         <div
           className={`relative w-full overflow-hidden bg-neutral-900 select-none ${
             isTheater ? 'aspect-[21/9] max-h-[80vh]' : 'aspect-video rounded-2xl'
@@ -865,168 +733,25 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     return (
       <div className="w-full">
         {upcomingBanner}
-        {serverSelectorBar}
         <div
           ref={containerRef}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => {
-            if (isPlaying) setShowControls(false);
-            endHoldSpeed();
-          }}
-          className={`relative w-full overflow-hidden bg-black select-none group touch-none ${
+          className={`relative w-full overflow-hidden bg-black select-none ${
             isTheater ? 'aspect-[21/9] max-h-[80vh]' : 'aspect-video rounded-2xl'
           } shadow-2xl border border-white/5`}
         >
-          <div className="relative w-full h-full">
-            <iframe
-              src={cleanEmbedUrl}
-              title={title || 'Video Player'}
-              suppressHydrationWarning={true}
-              loading="eager"
-              sandbox={isSandboxed ? 'allow-scripts allow-same-origin allow-forms allow-presentation' : undefined}
-              allow="accelerometer *; autoplay *; clipboard-write *; encrypted-media *; fullscreen *; gyroscope *; picture-in-picture *; web-share *"
-              referrerPolicy="strict-origin-when-cross-origin"
-              className="h-full w-full border-0"
-            />
+          <iframe
+            src={cleanEmbedUrl}
+            title={title || 'Video Player'}
+            suppressHydrationWarning={true}
+            loading="eager"
+            sandbox={isSandboxed ? 'allow-scripts allow-same-origin allow-forms allow-presentation' : undefined}
+            allow="accelerometer *; autoplay *; clipboard-write *; encrypted-media *; fullscreen *; gyroscope *; picture-in-picture *; web-share *"
+            referrerPolicy="strict-origin-when-cross-origin"
+            className="h-full w-full border-0"
+          />
 
-            {/* Mobile Touch Gesture Overlay */}
-            {!directTouchMode && (
-              <div
-                className="absolute inset-0 z-10 select-none touch-none"
-                onTouchStart={(e) => {
-                  if (e.touches.length > 0) {
-                    handlePointerStart(e.touches[0].clientX, e.touches[0].clientY);
-                  }
-                }}
-                onTouchMove={(e) => {
-                  if (e.touches.length > 0) {
-                    handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
-                  }
-                }}
-                onTouchEnd={(e) => {
-                  if (e.changedTouches.length > 0) {
-                    handlePointerEnd(e.changedTouches[0].clientX);
-                  }
-                }}
-                onMouseDown={(e) => {
-                  if (e.button === 0) {
-                    handlePointerStart(e.clientX, e.clientY);
-                  }
-                }}
-                onMouseUp={(e) => {
-                  if (e.button === 0) {
-                    handlePointerEnd(e.clientX);
-                  }
-                }}
-              />
-            )}
-
-            {/* 2X Speed YouTube-style Hold Indicator */}
-            {isHoldingFastForward && (
-              <div className="absolute top-5 inset-x-0 flex items-center justify-center pointer-events-none z-40 animate-in fade-in zoom-in-90 duration-150">
-                <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/85 border border-white/20 backdrop-blur-md shadow-2xl text-white text-xs font-bold tracking-wider uppercase">
-                  <span>2X Speed</span>
-                  <FastForward className="h-4 w-4 text-indigo-400 fill-indigo-400 animate-pulse" />
-                </div>
-              </div>
-            )}
-
-            {/* Double Tap Visual Ripple Feedback */}
-            {doubleTapFeedback && (
-              <div
-                className={`absolute inset-y-0 ${
-                  doubleTapFeedback.side === 'left' ? 'left-0' : 'right-0'
-                } w-1/3 flex items-center justify-center pointer-events-none z-30`}
-              >
-                <div className="flex flex-col items-center gap-2 px-5 py-4 rounded-full bg-black/70 backdrop-blur-md border border-white/10 text-white animate-in zoom-in-50 duration-200">
-                  {doubleTapFeedback.side === 'left' ? (
-                    <RotateCcw className="h-8 w-8 text-indigo-400 animate-spin-reverse" />
-                  ) : (
-                    <RotateCw className="h-8 w-8 text-indigo-400 animate-spin" />
-                  )}
-                  <span className="text-xs font-black tracking-wider">
-                    {doubleTapFeedback.side === 'left' ? '-' : '+'}
-                    {doubleTapFeedback.count}s
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Floating Navigation Player Controls HUD */}
-            <div
-              className={`absolute bottom-3 inset-x-3 z-20 flex items-center justify-between px-3.5 py-2 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 transition-opacity duration-200 ${
-                showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => seekRelative(-10)}
-                  className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1 transition"
-                  title="Rewind 10s (Double tap left side)"
-                >
-                  <RotateCcw className="h-3.5 w-3.5 text-indigo-400" />
-                  <span>-10s</span>
-                </button>
-                <button
-                  onClick={togglePlay}
-                  className="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition"
-                  title="Play / Pause"
-                >
-                  {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                </button>
-                <button
-                  onClick={() => seekRelative(10)}
-                  className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1 transition"
-                  title="Fast Forward 10s (Double tap right side)"
-                >
-                  <span>+10s</span>
-                  <RotateCw className="h-3.5 w-3.5 text-indigo-400" />
-                </button>
-                <button
-                  onMouseDown={startHoldSpeed}
-                  onMouseUp={endHoldSpeed}
-                  onTouchStart={startHoldSpeed}
-                  onTouchEnd={endHoldSpeed}
-                  className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold flex items-center gap-1 transition"
-                  title="Hold for 2X Speed"
-                >
-                  <FastForward className="h-3 w-3 text-indigo-400" />
-                  <span>2X</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 font-bold text-[10px] border border-indigo-500/30">
-                  1080p Full HD
-                </span>
-                <button
-                  onClick={() => setDirectTouchMode(!directTouchMode)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-semibold border transition ${
-                    directTouchMode
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                  }`}
-                  title="Toggle between gesture shield mode and direct embed interaction"
-                >
-                  {directTouchMode ? 'Direct Touch' : 'Shield Mode'}
-                </button>
-                <button
-                  onClick={toggleFullscreen}
-                  className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition"
-                  title="Toggle Fullscreen"
-                >
-                  <Maximize className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-          {/* Cinema Stream & Theater Overlay Controls */}
-          <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
-            <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-black/75 border border-indigo-500/40 text-[10px] font-bold text-indigo-400 backdrop-blur-md shadow-lg">
-              <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
-              <span>Cinema Stream Active</span>
-            </div>
-            {onToggleTheater && (
+          {onToggleTheater && (
+            <div className="absolute top-3 right-3 z-20">
               <button
                 onClick={onToggleTheater}
                 className="rounded-xl bg-black/60 hover:bg-black/90 p-2 text-white/80 hover:text-white transition backdrop-blur-sm border border-white/10"
@@ -1034,8 +759,8 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
               >
                 <Tv className={`h-4 w-4 ${isTheater ? 'text-indigo-400' : ''}`} />
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Stream Status & Mirror Switcher */}
@@ -1046,14 +771,31 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
             <span className="font-semibold text-emerald-400 text-xs">
-              Cinema Stream Shield Active
+              Cinema Stream Active
             </span>
             <span className="text-slate-500">•</span>
             <span className="text-slate-400 text-[11px]">
-              {isSandboxed ? 'Sandbox popups & ad redirects blocked' : 'Unrestricted playback mode'}
+              {activeServer?.name || '1080p Stream'}
             </span>
           </div>
           <div className="flex items-center gap-2">
+            {onLanguageChange && (
+              <div className="flex items-center gap-1 mr-1">
+                <Globe className="h-3.5 w-3.5 text-indigo-400" />
+                <select
+                  value={currentLanguage || 'en'}
+                  onChange={(e) => onLanguageChange(e.target.value)}
+                  className="bg-black/60 border border-white/10 rounded-md px-1.5 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                  aria-label="Playback Audio Language"
+                >
+                  {PLAYBACK_LANGUAGES.map((lang) => (
+                    <option key={lang.code} value={lang.code} className="bg-[#11131a] text-white">
+                      {lang.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <button
               onClick={() => setIsSandboxed(!isSandboxed)}
               className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] font-medium transition"
@@ -1069,7 +811,6 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
                   const nextSrv = srvs[(currentIdx + 1) % srvs.length];
                   if (nextSrv) {
                     setActiveSrc(nextSrv.url);
-                    setAbsorbClick(true);
                   }
                 }}
                 className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 font-semibold text-[11px] border border-indigo-500/30 transition flex items-center gap-1.5"
@@ -1138,7 +879,6 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   return (
     <div className="w-full">
       {upcomingBanner}
-      {serverSelectorBar}
       <div
         ref={containerRef}
         onMouseMove={handleMouseMove}
